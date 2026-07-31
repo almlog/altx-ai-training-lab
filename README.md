@@ -4,7 +4,7 @@ Starter kit for the **Build with Gemini** (Gemini World Tour, Track 3) lab. Clon
 
 > 📖 **New here? Start with the lab guide → https://cszhu.github.io/build-with-gemini/**
 >
-> This repo is the companion starter kit that guide tells you to clone. It ships the Antigravity **skills** and **tool config** that make the lab work.
+> This repo is the companion starter kit the guide tells you to clone. It ships the Antigravity **skills** and **tool config** that make the lab work.
 
 ## 🚀 What you'll build
 
@@ -19,7 +19,7 @@ The lab walks you through turning a bare chatbot into a full agentic app, one ca
 - **Rich UI** replies with A2UI cards
 - **A web frontend** on Cloud Run, plus a shareable demo video
 
-The agent deploys to [Agent Platform](https://docs.cloud.google.com/gemini-enterprise-agent-platform) and the frontend to [Cloud Run](https://cloud.google.com/run), all built with the help of the coding agent Antigravity.
+You build all of it with Antigravity, then deploy the agent to [Agent Platform](https://docs.cloud.google.com/gemini-enterprise-agent-platform) and the frontend to [Cloud Run](https://cloud.google.com/run).
 
 ## ✅ Prerequisites
 
@@ -51,7 +51,7 @@ Then follow the [lab guide](https://cszhu.github.io/build-with-gemini/) to build
 
 ## 🧠 What's in this repo
 
-The whole repo is one thing: an `.agents/` folder that teaches Antigravity how to build agents on Google Cloud.
+The repo is a single `.agents/` folder that teaches Antigravity how to build agents on Google Cloud.
 
 ### Skills
 
@@ -69,10 +69,10 @@ A **skill** is a bundle of instructions that loads automatically when it's relev
 
 ### Pre-configured tools (MCP)
 
-[`.agents/mcp_config.json`](.agents/mcp_config.json) wires up two [Model Context Protocol](https://modelcontextprotocol.io/) servers that authenticate with your gcloud credentials, so the agent has grounded, current knowledge instead of guessing:
+[`.agents/mcp_config.json`](.agents/mcp_config.json) wires up two [Model Context Protocol](https://modelcontextprotocol.io/) servers that authenticate with your gcloud credentials, so the agent can look things up instead of guessing:
 
-- **Firebase** — work directly with Firestore and other Firebase services
-- **Google Developer Knowledge** — grounded access to Google's official docs (Cloud, Firebase, ADK, Agent Platform)
+- **Firebase**: work directly with Firestore and other Firebase services
+- **Google Developer Knowledge**: grounded access to Google's official docs (Cloud, Firebase, ADK, Agent Platform)
 
 ### Layout
 
@@ -84,7 +84,7 @@ A **skill** is a bundle of instructions that loads automatically when it's relev
 
 ## 📚 Resources
 
-- **[Lab guide](https://cszhu.github.io/build-with-gemini/)** — the step-by-step workshop
+- **[Lab guide](https://cszhu.github.io/build-with-gemini/)**: the step-by-step workshop
 - [Antigravity](https://antigravity.google)
 - [agents-cli](https://google.github.io/agents-cli/guide/getting-started/)
 - [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
