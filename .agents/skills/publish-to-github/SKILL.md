@@ -68,10 +68,13 @@ If the secret scan aborts, remove or `.gitignore` the flagged file and re-run.
 Check first, then log in only if needed:
 
 ```bash
-gh auth status || gh auth login --hostname github.com --git-protocol https --web
+gh auth status >/dev/null 2>&1 || printf 'y\n' | gh auth login --hostname github.com --git-protocol https --web
 ```
 
-`gh auth login` prints a **one-time code** and the URL `https://github.com/login/device`.
+The `printf 'y\n'` pre-answers gh's one interactive prompt — *"Authenticate Git
+with your GitHub credentials? (Y/n)"* — which otherwise stalls a non-interactive
+run (answering yes sets up the git credential helper so the later push works).
+`gh auth login` then prints a **one-time code** and the URL `https://github.com/login/device`.
 Relay both to the participant and tell them:
 
 > Open **github.com/login/device** on any device, sign in with **your personal
@@ -136,6 +139,7 @@ Then explain the payoff:
 | --- | --- |
 | `gh: command not found` after prep | `export PATH="$HOME/.local/bin:$PATH"`; if still missing, install manually: https://github.com/cli/cli#installation |
 | gh auto-install fails | No `curl`/internet, or a locked-down image — install gh manually (link above), then re-run from Step 2. |
+| Login stalls at `Authenticate Git with your GitHub credentials? (Y/n)` | Use the Step 2 command (it pipes `printf 'y\n'`), or just answer `Y`. The device code appears right after. |
 | Device code expired / login hung | Re-run `gh auth login --hostname github.com --git-protocol https --web`; authorize the new code promptly. |
 | Signed into the wrong GitHub account | `gh auth logout`, then log in again with their personal account (or `gh auth switch`). Verify with `gh auth status`. |
 | `git commit` fails: no identity | They aren't signed in yet — do Step 2 first, then `publish.sh commit`. |

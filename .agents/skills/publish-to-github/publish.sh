@@ -62,7 +62,7 @@ ensure_gh() {
   fi
   info "GitHub CLI (gh) not found — installing to ~/.local/bin (no sudo needed)…"
 
-  local os arch ghos gharch tag ver tmp url
+  local os arch ghos gharch tag ver tmp url rel_json
   os="$(uname -s)"; arch="$(uname -m)"
   case "$os" in
     Linux)  ghos="linux" ;;
@@ -77,9 +77,17 @@ ensure_gh() {
 
   command -v curl >/dev/null 2>&1 || die "curl is required to auto-install gh. Install gh manually: https://github.com/cli/cli#installation"
 
-  tag="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest \
-          | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
-  [ -n "$tag" ] || die "Could not determine the latest gh release. Install gh manually: https://github.com/cli/cli#installation"
+  # Capture the release JSON into a variable FIRST, then parse it. Piping curl
+  # straight into `grep -m1` makes grep close the pipe early; under `set -o
+  # pipefail` curl then dies with exit 23 ("failure writing output") and aborts
+  # the whole script. Parsing a variable avoids the broken pipe entirely.
+  rel_json="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest 2>/dev/null || true)"
+  tag="$(printf '%s' "$rel_json" | grep '"tag_name"' | head -n1 \
+          | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' || true)"
+  if [ -z "$tag" ]; then
+    tag="v2.63.2"   # pinned fallback if the API is unreachable or rate-limited
+    warn "Could not query the latest gh release — falling back to $tag"
+  fi
   ver="${tag#v}"
   tmp="$(mktemp -d)"
   # macOS release assets are .zip; Linux are .tar.gz
@@ -244,18 +252,27 @@ cmd_commit() {
 
 # ---------------------------------------------------------------------------
 # Pull a title + one-liner out of project_brief.md if it's there.
+# Locate the brief at CWD or the git repo root (the agent is often scaffolded
+# into a subfolder, so CWD may not be where project_brief.md lives). Every
+# helper returns 0 even on no-match so `set -o pipefail` never aborts formlink.
 # ---------------------------------------------------------------------------
+brief_file() {
+  if [ -f project_brief.md ]; then echo "project_brief.md"; return 0; fi
+  local root; root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -n "$root" ] && [ -f "$root/project_brief.md" ]; then echo "$root/project_brief.md"; fi
+  return 0
+}
 brief_title() {
-  [ -f project_brief.md ] || return 0
+  local f; f="$(brief_file)"; [ -n "$f" ] || return 0
   # "# My agent: <name>"  ->  <name>
-  grep -m1 -E '^#[[:space:]]*My agent:' project_brief.md 2>/dev/null \
-    | sed -E 's/^#[[:space:]]*My agent:[[:space:]]*//' | tr -d '\r'
+  { grep -m1 -E '^#[[:space:]]*My agent:' "$f" 2>/dev/null \
+      | sed -E 's/^#[[:space:]]*My agent:[[:space:]]*//' | tr -d '\r'; } || true
 }
 brief_desc() {
-  [ -f project_brief.md ] || return 0
+  local f; f="$(brief_file)"; [ -n "$f" ] || return 0
   # "One-liner: <text>"  ->  <text>
-  grep -m1 -E '^One-liner:' project_brief.md 2>/dev/null \
-    | sed -E 's/^One-liner:[[:space:]]*//' | tr -d '\r'
+  { grep -m1 -E '^One-liner:' "$f" 2>/dev/null \
+      | sed -E 's/^One-liner:[[:space:]]*//' | tr -d '\r'; } || true
 }
 
 urlencode() { # via python3 (present in the lab); prints URL-encoded stdin arg
