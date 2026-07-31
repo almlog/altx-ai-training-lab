@@ -2,62 +2,107 @@
 
 <img src="assets/build-with-gemini-banner.png" alt="Build with Gemini" width="100%" />
 
+# 🚀 Build with Gemini · Track 3
+
+### The starter kit for Track 3 of the Build with Gemini World Tour, and a showcase of what participants built with it.
+
+Clone this repo, open [Antigravity](https://antigravity.google), and build your own agent-first app on Google Cloud. Every project in the [gallery below](#-featured-projects) was built the same way: prototyped with Antigravity and `agents-cli`, equipped with Memory, tools, storage, and RAG, deployed to Agent Platform, and given a face on Cloud Run.
+
+<br/>
+
+![Build with Gemini](https://img.shields.io/badge/Build%20with%20Gemini-World%20Tour-4285F4?logo=google&logoColor=white)
+![Track 3](https://img.shields.io/badge/Track%203-Agent--First%20Apps-EA4335)
+![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Agent%20Platform-4285F4?logo=googlecloud&logoColor=white)
+![Built with ADK](https://img.shields.io/badge/Built%20with-ADK%20%2B%20agents--cli-34A853)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+![Projects](https://img.shields.io/badge/Projects-0-blue)
+
+<sub>📖 <a href="https://cszhu.github.io/build-with-gemini/">Lab Guide</a> · 🛠️ <a href="https://google.github.io/agents-cli/guide/getting-started/">agents-cli</a> · 🤖 <a href="https://google.github.io/adk-docs/">ADK</a></sub>
+
 </div>
 
-# Build with Gemini · Track 3
+---
 
-Starter kit for the **Build with Gemini** (Gemini World Tour, Track 3) lab. Clone it, open [Antigravity](https://antigravity.google), and go from an empty folder to a deployed, agent-first application on Google Cloud.
+## 📚 Table of Contents
 
-> 📖 **New here? Start with the lab guide → https://cszhu.github.io/build-with-gemini/**
->
-> This repo is the companion starter kit the guide tells you to clone. It ships the Antigravity **skills** and **tool config** that make the lab work.
+- [🧩 Anatomy of a Track 3 Project](#-anatomy-of-a-track-3-project)
+- [🏷️ Capability Legend](#️-capability-legend)
+- [📂 Featured Projects](#-featured-projects)
+  - [🛍️ Commerce & Marketplace Agents](#️-commerce--marketplace-agents)
+  - [🍳 Food & Recipe Agents](#-food--recipe-agents)
+  - [✈️ Travel & Local Agents](#️-travel--local-agents)
+  - [💪 Health, Fitness & Wellness Agents](#-health-fitness--wellness-agents)
+  - [📚 Learning & Knowledge Agents](#-learning--knowledge-agents)
+  - [🎨 Creative & Media Agents](#-creative--media-agents)
+  - [🏢 Productivity & Enterprise Agents](#-productivity--enterprise-agents)
+  - [🧪 Experimental & Other](#-experimental--other)
+- [🧠 What's in this Repo](#-whats-in-this-repo)
+- [🧰 Build Your Own](#-build-your-own)
+- [📚 Resources](#-resources)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
 
-## 🚀 What you'll build
+---
 
-The lab walks you through turning a bare chatbot into a full agentic app, one capability at a time:
+## 🧩 Anatomy of a Track 3 Project
 
-- **Memory & sessions** so your agent remembers users across conversations (Agent Platform Memory Bank)
-- **Function tools** so it takes real actions and looks up real data
-- **Persistent storage** in Firestore (structured data) and Cloud Storage (images and files)
-- **RAG** to ground answers on your own documents
-- **Image generation** with Gemini
-- **A code sandbox** for safely running model-written code
-- **Rich UI** replies with A2UI cards
-- **A web frontend** on Cloud Run, plus a shareable demo video
+Every app in this collection is built from the same set of Google Cloud building blocks introduced in the lab. Once you understand this shape, you can read any project here at a glance:
 
-You build all of it with Antigravity, then deploy the agent to [Agent Platform](https://docs.cloud.google.com/gemini-enterprise-agent-platform) and the frontend to [Cloud Run](https://cloud.google.com/run).
+| Layer | What it does | Powered by |
+|---|---|---|
+| 🤖 **The Agent** | The core reasoning loop | [ADK](https://google.github.io/adk-docs/) + [`agents-cli`](https://google.github.io/agents-cli/guide/getting-started/), scaffolded with [Antigravity](https://antigravity.google) |
+| 🧠 **Memory** | Remembers facts across sessions | [Agent Platform Memory Bank](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/memory-bank) |
+| 🗄️ **Structured data** | Inventory, records, lists | [Firestore](https://console.cloud.google.com/firestore) |
+| 🖼️ **Files & blobs** | Images, media, assets | [Cloud Storage](https://console.cloud.google.com/storage) |
+| 🔧 **Tools** | Take real actions and fetch real data | ADK function tools |
+| 📖 **RAG** | Answers grounded in your documents | [Vertex AI RAG Engine](https://console.cloud.google.com/agent-platform/rag) |
+| 🎨 **Media generation** | Creates images (and video) on demand | `gemini-3.1-flash-lite-image` (Nano Banana 2 Lite) · Omni (video) |
+| 🧪 **Code sandbox** | Safely runs generated code | Agent Platform code execution |
+| 🪟 **Agent-first UI** | Cards and tables instead of plain text | [A2UI](https://adk.dev/integrations/a2ui/) |
+| 🌐 **Frontend** | A shareable web face | FastAPI proxy on [Cloud Run](https://cloud.google.com/run) |
 
-## ✅ Prerequisites
+---
 
-The lab workstation comes with all of this pre-installed. To run it on your own machine you'll need:
+## 🏷️ Capability Legend
 
-- A **Google Cloud project** with billing enabled
-- **[Antigravity](https://antigravity.google)** (`agy`), the coding agent that loads the skills below
-- **[agents-cli](https://google.github.io/agents-cli/guide/getting-started/)**, Google's agent-development CLI, built on the [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
-- Authenticated gcloud: `gcloud auth login` and `gcloud auth application-default login`
-- A personal **GitHub account** for the final publish-and-submit step
+Each project below is tagged with the building blocks it uses, so you can find exactly the pattern you want to learn:
 
-## ⚡ Quickstart
+`🧠 Memory` · `🗄️ Firestore` · `🖼️ Storage` · `🔧 Tools` · `📖 RAG` · `🎨 Image Gen` · `🎬 Video` · `🧪 Sandbox` · `🪟 A2UI` · `🌐 Cloud Run`
 
-```bash
-git clone https://github.com/cszhu/build-with-gemini
-cd build-with-gemini
-agy
-```
+---
 
-On startup, Antigravity scans the `.agents/` folder and loads the workshop skills and tools automatically. In the AGY prompt:
+## 📂 Featured Projects
 
-```text
-/skills            # see the installed skills
-/mcp               # confirm the firebase + google-developer-knowledge tools are connected
-Verify my setup.   # runs the troubleshoot-lab-setup skill to check your environment
-```
+A showcase of what workshop participants built with this lab. Entries are added here from the swag and gallery submission form after each event, so the categories below start empty and fill in over time. Browse them for inspiration, or [submit your own](#-contributing) once you've published your project with the `publish-to-github` skill.
 
-Then follow the [lab guide](https://cszhu.github.io/build-with-gemini/) to build, deploy, and share your agent.
+<!--
+Add one entry per project, in this format:
+- 🌿 **[Project Name](https://github.com/their-handle/their-repo)**: one-line description of what it does. <br/> <sub>`🗄️ Firestore` · `🎨 Image Gen` · `🪟 A2UI`, by [@handle](https://github.com/handle)</sub>
 
-## 🧠 What's in this repo
+Pick tags from the Capability Legend above. Bump the "Projects" badge count at the top when you add one.
+-->
 
-The repo is a single `.agents/` folder that teaches Antigravity how to build agents on Google Cloud.
+### 🛍️ Commerce & Marketplace Agents
+
+### 🍳 Food & Recipe Agents
+
+### ✈️ Travel & Local Agents
+
+### 💪 Health, Fitness & Wellness Agents
+
+### 📚 Learning & Knowledge Agents
+
+### 🎨 Creative & Media Agents
+
+### 🏢 Productivity & Enterprise Agents
+
+### 🧪 Experimental & Other
+
+---
+
+## 🧠 What's in this Repo
+
+The `.agents/` folder teaches Antigravity how to build agents on Google Cloud.
 
 ### Skills
 
@@ -88,20 +133,39 @@ A **skill** is a bundle of instructions that loads automatically when it's relev
 └── skills/            # the workshop skills listed above
 ```
 
-## 🏆 Project Gallery
+---
 
-A showcase of what workshop participants built with this lab. Every project here was built end-to-end on Google Cloud: prototyped with Antigravity and `agents-cli`, equipped with Memory, tools, storage, and RAG, deployed to Agent Platform, and given a face on Cloud Run.
+## 🧰 Build Your Own
 
-Projects are added from the swag & gallery submission form after each event, so this section starts empty and fills in over time. Browse them for inspiration, or [submit your own](#-contributing) once you've published your project with the `publish-to-github` skill.
+The full, step-by-step walkthrough lives on the **[lab guide](https://cszhu.github.io/build-with-gemini/)**. This is the short version.
 
-<!--
-Add one entry per project, in this format:
-- 🌿 **[Project Name](https://github.com/their-handle/their-repo)**: one-line description of what it does. <br/> <sub>`🗄️ Firestore` · `🎨 Image Gen` · `🪟 A2UI`, by [@handle](https://github.com/handle)</sub>
+**Prerequisites** (the lab workstation comes with all of this pre-installed; you'll need it if you're running on your own machine):
 
-Capability tags: `🧠 Memory` · `🗄️ Firestore` · `🖼️ Storage` · `🔧 Tools` · `📖 RAG` · `🎨 Image Gen` · `🎬 Video` · `🧪 Sandbox` · `🪟 A2UI` · `🌐 Cloud Run`
--->
+- A **Google Cloud project** with billing enabled
+- **[Antigravity](https://antigravity.google)** (`agy`), the coding agent that loads the skills above
+- **[agents-cli](https://google.github.io/agents-cli/guide/getting-started/)**, built on the [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
+- Authenticated gcloud: `gcloud auth login` and `gcloud auth application-default login`
+- A personal **GitHub account** for the final publish-and-submit step
 
-*No projects yet. Check back after the next event!*
+**Quickstart:**
+
+```bash
+git clone https://github.com/cszhu/build-with-gemini
+cd build-with-gemini
+agy
+```
+
+On startup, Antigravity scans the `.agents/` folder and loads the skills and tools above automatically. In the AGY prompt:
+
+```text
+/skills            # see the installed skills
+/mcp               # confirm the firebase + google-developer-knowledge tools are connected
+Verify my setup.   # runs the troubleshoot-lab-setup skill to check your environment
+```
+
+Then follow the [lab guide](https://cszhu.github.io/build-with-gemini/) to design, build, deploy, and share your agent, start to finish.
+
+---
 
 ## 📚 Resources
 
@@ -111,12 +175,16 @@ Capability tags: `🧠 Memory` · `🗄️ Firestore` · `🖼️ Storage` · `�
 - [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
 - [Gemini Enterprise Agent Platform](https://docs.cloud.google.com/gemini-enterprise-agent-platform)
 
+---
+
 ## 🤝 Contributing
 
-**Built something?** Publish it with the `publish-to-github` skill and submit it through the form it gives you. Submissions get you swag, and standout projects get added to the [Project Gallery](#-project-gallery) above.
+**Built something?** Publish it with the `publish-to-github` skill and submit it through the form it gives you. Submissions get you swag, and standout projects get added to the [Featured Projects](#-featured-projects) gallery above.
 
 **Found a bug?** If you hit a rough edge in a skill or the lab, please [open an issue](https://github.com/cszhu/build-with-gemini/issues).
 
-## 📄 License & disclaimer
+---
+
+## 📄 License
 
 This is not an officially supported Google product and is provided for the Build with Gemini workshop for demonstration purposes only.
