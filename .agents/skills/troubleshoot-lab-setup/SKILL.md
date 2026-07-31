@@ -32,7 +32,7 @@ the user what you found.
 ## Preflight: start-of-lab health check
 
 When the user asks to verify their setup (or you're kicking off the lab), run
-**checks 0-4 below in order** and report a clear pass/fail summary, e.g.:
+**checks 0-5 below in order** and report a clear pass/fail summary, e.g.:
 
 ```
 Setup check:
@@ -41,6 +41,7 @@ Setup check:
 ✅ gcloud auth + ADC present
 ✅ Vertex AI / aiplatform API enabled
 ✅ roles/aiplatform.user granted
+✅ agents-cli skills loaded in AGY
 You're ready to start. ✅
 ```
 
@@ -130,6 +131,23 @@ runs as its own service account with **no Firestore/Cloud Storage access by
 default**, so any agent that reads Firestore must have `roles/datastore.user`
 granted to that service account — **grant it at deploy time** (see "After you
 deploy" below), not just `aiplatform.user` on your user.
+
+**5. Are the agents-cli skills loaded in AGY?** The lab's scaffold, deploy,
+evaluate, and Memory Bank steps all rely on the `google-agents-cli-*` skills
+being registered with Antigravity. These are **separate** from the workshop
+skills that ship in the repo's `.agents/skills/` — they're installed by the
+`agents-cli setup` step, not automatically.
+
+- In AGY, run `/skills` and confirm you see the `google-agents-cli-*` lifecycle
+  skills (e.g. scaffold, deploy, adk-code) **in addition to** the workshop
+  skills. If only the workshop skills appear, the agents-cli skills aren't loaded.
+- If they're missing, install them from the Cloud Shell:
+  ```bash
+  agents-cli setup --skip-auth
+  ```
+- Then **restart Antigravity** so it picks up the newly installed skills (see
+  "Antigravity / MCP behaving oddly right after install" below), and re-run
+  `/skills` to confirm they now appear.
 
 > Tip: if you have the **Developer Knowledge MCP** installed, use it to confirm
 > the exact API name, role, and command for a given product instead of guessing.
