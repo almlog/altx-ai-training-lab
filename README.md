@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="assets/build-with-gemini-banner.png" alt="Build with Gemini" width="100%" />
+
+</div>
+
 # Build with Gemini · Track 3
 
 Starter kit for the **Build with Gemini** (Gemini World Tour, Track 3) lab. Clone it, open [Antigravity](https://antigravity.google), and go from an empty folder to a deployed, agent-first application on Google Cloud.
@@ -82,6 +88,21 @@ A **skill** is a bundle of instructions that loads automatically when it's relev
 └── skills/            # the workshop skills listed above
 ```
 
+## 🏆 Project Gallery
+
+A showcase of what workshop participants built with this lab. Every project here was built end-to-end on Google Cloud: prototyped with Antigravity and `agents-cli`, equipped with Memory, tools, storage, and RAG, deployed to Agent Platform, and given a face on Cloud Run.
+
+Projects are added from the swag & gallery submission form after each event, so this section starts empty and fills in over time. Browse them for inspiration, or [submit your own](#-contributing) once you've published your project with the `publish-to-github` skill.
+
+<!--
+Add one entry per project, in this format:
+- 🌿 **[Project Name](https://github.com/their-handle/their-repo)**: one-line description of what it does. <br/> <sub>`🗄️ Firestore` · `🎨 Image Gen` · `🪟 A2UI`, by [@handle](https://github.com/handle)</sub>
+
+Capability tags: `🧠 Memory` · `🗄️ Firestore` · `🖼️ Storage` · `🔧 Tools` · `📖 RAG` · `🎨 Image Gen` · `🎬 Video` · `🧪 Sandbox` · `🪟 A2UI` · `🌐 Cloud Run`
+-->
+
+*No projects yet. Check back after the next event!*
+
 ## 📚 Resources
 
 - **[Lab guide](https://cszhu.github.io/build-with-gemini/)**: the step-by-step workshop
@@ -92,7 +113,9 @@ A **skill** is a bundle of instructions that loads automatically when it's relev
 
 ## 🤝 Contributing
 
-This is workshop material. If you hit a bug or a rough edge in a skill or the lab, please [open an issue](https://github.com/cszhu/build-with-gemini/issues).
+**Built something?** Publish it with the `publish-to-github` skill and submit it through the form it gives you. Submissions get you swag, and standout projects get added to the [Project Gallery](#-project-gallery) above.
+
+**Found a bug?** If you hit a rough edge in a skill or the lab, please [open an issue](https://github.com/cszhu/build-with-gemini/issues).
 
 ## 📄 License & disclaimer
 
