@@ -161,6 +161,9 @@ On startup, Antigravity scans the `.agents/` folder and loads the skills and too
 ```text
 /skills            # see the installed skills
 /mcp               # confirm the firebase + google-developer-knowledge tools are connected
+```
+
+```text
 Verify my setup.   # runs the troubleshoot-lab-setup skill to check your environment
 ```
 
