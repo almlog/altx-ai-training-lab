@@ -17,9 +17,17 @@
 #                                   the project title + description from
 #                                   project_brief.md) already filled in.
 #
+#   publish.sh reponame             Print the default repo name:
+#                                   buildwithgemini-<project-folder-name>.
+#                                   Registration staff look for this prefix
+#                                   when redeeming swag, so it's the name
+#                                   proposed by default (the participant can
+#                                   still override it).
+#
 # Usage:
 #   bash .agents/skills/publish-to-github/publish.sh prep      # install gh, stage, scan
 #   bash .agents/skills/publish-to-github/publish.sh commit    # set identity + commit (after auth)
+#   bash .agents/skills/publish-to-github/publish.sh reponame  # print the default repo name
 #   bash .agents/skills/publish-to-github/publish.sh formlink https://github.com/<you>/<repo>
 #
 set -euo pipefail
@@ -182,9 +190,19 @@ secret_scan() {
         offenders+="  $f  (sensitive filename)"$'\n' ; continue ;;
     esac
     # content check on smallish text files
-    if [ "$(wc -c < "$f" 2>/dev/null || echo 0)" -lt 1000000 ] \
-       && grep -qE '("private_key"[[:space:]]*:|-----BEGIN [A-Z ]*PRIVATE KEY-----)' "$f" 2>/dev/null; then
-      offenders+="  $f  (looks like a private key / credential)"$'\n'
+    if [ "$(wc -c < "$f" 2>/dev/null || echo 0)" -lt 1000000 ]; then
+      if grep -qE '("private_key"[[:space:]]*:|-----BEGIN [A-Z ]*PRIVATE KEY-----)' "$f" 2>/dev/null; then
+        offenders+="  $f  (looks like a private key / credential)"$'\n'
+      fi
+      # Hardcoded API keys / tokens, not just credential files. Conservative
+      # patterns to avoid false positives on env-var lookups (os.environ[...]).
+      if grep -qE 'AIza[0-9A-Za-z_-]{35}' "$f" 2>/dev/null; then
+        offenders+="  $f  (looks like a Google API key)"$'\n'
+      elif grep -qE 'AKIA[0-9A-Z]{16}' "$f" 2>/dev/null; then
+        offenders+="  $f  (looks like an AWS access key ID)"$'\n'
+      elif grep -qiE '(api[_-]?key|secret|token)[[:space:]]*[:=][[:space:]]*["'"'"'][A-Za-z0-9_-]{16,}["'"'"']' "$f" 2>/dev/null; then
+        offenders+="  $f  (looks like a hardcoded API key / secret / token)"$'\n'
+      fi
     fi
   done <<< "$staged"
 
@@ -279,6 +297,20 @@ urlencode() { # via python3 (present in the lab); prints URL-encoded stdin arg
   python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
 }
 
+# ---------------------------------------------------------------------------
+# Default repo name: buildwithgemini-<project-folder-name>, slugified.
+# Registration staff look for this exact prefix at swag redemption, so it's
+# the name proposed by default (the participant can still rename it, but
+# should keep the prefix if they do).
+# ---------------------------------------------------------------------------
+cmd_reponame() {
+  local base slug
+  base="$(basename "$(pwd)")"
+  slug="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+  [ -n "$slug" ] || slug="my-agent"
+  printf 'buildwithgemini-%s\n' "$slug"
+}
+
 cmd_formlink() {
   local repo="${1:-}"
   [ -n "$repo" ] || die "Usage: publish.sh formlink <repo_url>"
@@ -305,6 +337,7 @@ main() {
   case "$sub" in
     prep)      cmd_prep "$@" ;;
     commit)    cmd_commit "$@" ;;
+    reponame)  cmd_reponame "$@" ;;
     formlink)  cmd_formlink "$@" ;;
     *) cat >&2 <<EOF
 publish.sh — helpers for the publish-to-github skill
@@ -314,6 +347,7 @@ Commands:
                        start a fresh git history, and stage. Does NOT commit or push.
   commit               Set the commit author from your GitHub login, then commit
                        the staged project. Run after 'gh auth login'.
+  reponame             Print the default repo name: buildwithgemini-<project-folder-name>.
   formlink <repo_url>  Print the pre-filled swag/gallery submission form URL.
 EOF
        exit 2 ;;

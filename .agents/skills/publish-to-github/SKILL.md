@@ -96,9 +96,18 @@ project.
 
 ## Step 4 — CONFIRM, then create the repo and push
 
-Pick a repo name (default: the project folder name, which they renamed to match
-their app; or slugify the name from `project_brief.md`). Then **ask for explicit
-confirmation** before doing anything remote, e.g.:
+Pick a repo name. Get the default with:
+
+```bash
+bash .agents/skills/publish-to-github/publish.sh reponame
+```
+
+This prints `buildwithgemini-<project-folder-name>` (slugified) — the naming
+convention registration staff check for when redeeming swag. Propose this name
+first. The participant can rename it, but if they do, tell them to keep the
+`buildwithgemini-` prefix so it's still recognized at the registration desk.
+
+Then **ask for explicit confirmation** before doing anything remote, e.g.:
 
 > I'm about to create a **public** repo **`<name>`** on your GitHub account
 > **`<login>`** and push your project to it. Good to go?
@@ -150,6 +159,6 @@ Then explain the payoff:
 
 ## Reference
 
-- Helper: `./publish.sh` (`prep`, `commit`, `formlink`)
+- Helper: `./publish.sh` (`prep`, `commit`, `reponame`, `formlink`)
 - Submission form: "Build with Gemini: Project Submission and Gallery Entry"
 - gh device flow: https://cli.github.com/manual/gh_auth_login
