@@ -1,6 +1,6 @@
 ---
 name: pick-your-agent-project
-description: Interactively help a workshop participant decide on and design what agent to build. Use when the user is choosing a project, brainstorming an agent idea, says "I don't know what to build" or "what should I make", OR asks to design/plan/"help me design"/"help me make"/"help me build" a specific agent idea (e.g. "help me design a travel planner agent", "help me make a recipe assistant", "design my agentic application") BEFORE any code is scaffolded — this is the planning/brief step, not implementation. Also use when they want to check whether their idea will actually exercise the workshop's Google tools (memory/sessions, function tools, storage + A2UI, image generation, code sandbox, evaluation). Guides a domain choice and a tool-coverage gut-check, writes a short project brief, then retitles the participant's existing scaffolded project (name, folder, and persona) to match it so they keep building on the same agent instead of a new one. Don't use for adding tools, memory, or other features (that comes after, in the lab steps that follow).
+description: Interactively help a workshop participant decide on and design what agent to build. Use when the user is choosing a project, brainstorming an agent idea, says "I don't know what to build" or "what should I make", OR asks to design/plan/"help me design"/"help me make"/"help me build" a specific agent idea (e.g. "help me design a travel planner agent", "help me make a recipe assistant", "design my agentic application") BEFORE any code is scaffolded — this is the planning/brief step, not implementation. Also use when they want to check whether their idea will actually exercise the workshop's Google tools (memory/sessions, function tools, storage + A2UI, image generation, code sandbox, evaluation). Guides a domain choice and a tool-coverage gut-check, then writes a short project brief. Don't use for implementing or coding the agent itself (that comes after the brief).
 ---
 
 # Pick your agent project
@@ -11,10 +11,8 @@ back-and-forth), land on a concrete idea, sanity-check that it will exercise the
 Google tools the workshop teaches, and hand them a short **project brief** they
 can build against.
 
-This is a *facilitation* task, not a build task. The brainstorm itself doesn't
-touch code — you help them decide, write the brief, then retitle their existing
-project to match it (see the last section). Building actual features (tools,
-memory, storage) happens later, in the lab steps that follow this skill.
+This is a *facilitation* task, not a build task. Do NOT write agent code, scaffold
+a project, or install anything here. Just help them decide.
 
 ## The one idea to convey: the tools define the shape
 
@@ -118,28 +116,13 @@ First eval question: <one example of a "good" response for this agent>
 The "first eval question" plants the evaluation mindset early — defining "good"
 is the hardest, most valuable part of the lab.
 
-## After you write the brief: retitle the existing project, then STOP
+## After you write the brief: STOP
 
-The participant already has a scaffolded agent project from earlier in the lab.
-The goal now is to make that *same* project match the brief they just wrote —
-not to create a second one. Do this in order:
+Writing `project_brief.md` is the end of this skill. Do **not** build, scaffold,
+install, or write any agent code — and do **not** *offer or ask* to ("want me to
+build it now?", "shall I implement this?", "ready to scaffold?"). Offering to
+build is still going off-script: the lab has the participant build the agent
+incrementally in the steps that follow, and jumping ahead defeats the point.
 
-1. Run the retitle script:
-   ```bash
-   bash .agents/skills/pick-your-agent-project/retitle.sh
-   ```
-2. It prints a `NEXT:` line with the project's new path and what to do. Follow
-   it: `cd` to that path.
-3. Open the root agent's file and update only its `instruction` (the system
-   prompt / persona) so it matches the brief's domain, one-liner, and tone.
-   Leave tools, memory, storage, deployment, and everything else exactly as
-   they are — the participant builds those themselves in the lab steps that
-   follow.
-
-The script handles the project name, folder, and config files — that part is
-mechanical and already done once it prints `NEXT:`. Your only edit is the
-instruction text in step 3.
-
-End your turn by telling them their project is renamed and restyled to match
-the brief, and to continue with the next step of the lab. Then stop — do not
-add tools, memory, or any other capability, and do not offer to.
+End your turn by telling them the brief is saved and to continue with the next
+step of the lab (they can edit `project_brief.md` first if they'd like). Then stop.
