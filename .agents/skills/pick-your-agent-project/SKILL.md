@@ -122,22 +122,24 @@ is the hardest, most valuable part of the lab.
 
 The participant already has a scaffolded agent project from earlier in the lab.
 The goal now is to make that *same* project match the brief they just wrote —
-not to create a second one.
-
-> **HARD RULE: your only edit is the agent's `instruction` text. Do not write
-> any other code, add tools/memory/storage, deploy, or scaffold a new project.**
-
-Do this in order:
+not to create a second one. Do this in order:
 
 1. Run the retitle script:
    ```bash
    bash .agents/skills/pick-your-agent-project/retitle.sh
    ```
-2. It prints a `NEXT:` line with the project's new path. Follow it: `cd` to that
-   path.
-3. Open the root agent's file and update its `instruction` (the system prompt /
-   persona) so it matches the brief's domain, one-liner, and tone. The script
-   already handled the project name, folder, and config files.
+2. It prints a `NEXT:` line with the project's new path and what to do. Follow
+   it: `cd` to that path.
+3. Open the root agent's file and update only its `instruction` (the system
+   prompt / persona) so it matches the brief's domain, one-liner, and tone.
+   Leave tools, memory, storage, deployment, and everything else exactly as
+   they are — the participant builds those themselves in the lab steps that
+   follow.
 
-Then end your turn: tell them their project is renamed and restyled to match the
-brief, and to continue with the next step of the lab.
+The script handles the project name, folder, and config files — that part is
+mechanical and already done once it prints `NEXT:`. Your only edit is the
+instruction text in step 3.
+
+End your turn by telling them their project is renamed and restyled to match
+the brief, and to continue with the next step of the lab. Then stop — do not
+add tools, memory, or any other capability, and do not offer to.
