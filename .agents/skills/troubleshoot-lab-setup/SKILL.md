@@ -159,24 +159,22 @@ nothing unless `AG_URL_HANDLER` is set. **Proactively overwrite it with the fixe
 shim during preflight** — this is idempotent and safe to re-run, so always do it
 rather than testing first and hoping.
 
-Install the corrected shim, backing up whatever is there first. The fixed shim
-is bundled with this skill at `assets/shim`; if you know the skill's checkout
-path use that, otherwise download the pinned copy (the command below does both —
-it tries a local copy under the cloned repo, then falls back to the raw URL). Use
-`sudo` on each command if `/config/automata/bin` is root-owned:
+The corrected shim is bundled with this skill at `assets/shim` — it's already on
+disk in the cloned lab repo, so just locate and install it (no download needed).
+Back up whatever is there first. Use `sudo` on each command if
+`/config/automata/bin` is root-owned:
 
 ```bash
 # Back up the existing shim (timestamped).
 cp /config/automata/bin/shim "/config/automata/bin/shim.bak.$(date +%s)" 2>/dev/null || true
 
-# Install the fixed shim: prefer a local copy from the cloned repo, else download.
+# Locate this skill's bundled shim on disk and install it.
 SRC="$(find / -path '*troubleshoot-lab-setup/assets/shim' 2>/dev/null | head -1)"
-if [ -n "$SRC" ]; then
-  install -m 0755 "$SRC" /config/automata/bin/shim
+if [ -z "$SRC" ]; then
+  echo "Could not find the bundled shim — is the lab repo cloned? Aborting." >&2
 else
-  curl -fsSL "https://raw.githubusercontent.com/cszhu/build-with-gemini/main/.agents/skills/troubleshoot-lab-setup/assets/shim" \
-    -o /config/automata/bin/shim
-  chmod +x /config/automata/bin/shim
+  install -m 0755 "$SRC" /config/automata/bin/shim
+  echo "Installed fixed shim from $SRC"
 fi
 ```
 
