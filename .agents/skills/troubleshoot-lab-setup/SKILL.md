@@ -7,7 +7,8 @@ description: >-
   environment", "did I log in correctly"), AND whenever the user hits an error and
   doesn't know why — permission denied / 403 / PERMISSION_DENIED, "API not
   enabled", a deploy that fails, the frontend can't reach the agent, /chat errors,
-  code sandbox failures, image generation failures, or a vague "it's not working".
+  code sandbox failures, image generation failures, Antigravity failing to open a
+  link / Chrome not launching in the remote desktop, or a vague "it's not working".
   Checks the usual culprits — signed into Antigravity with the right account
   (GCP/lab flow, not personal Google login), the GCP project is set, both
   gcloud auth login and application-default login have run, the API is enabled,
@@ -312,6 +313,36 @@ and shows the public URL. Two things must hold:
    `roles/storage.objectViewer` role on the bucket. If that grant fails with
    `public access prevention is enforced`, the project's organization blocks public
    buckets and the public-URL approach will not work there.
+
+### Antigravity can't open a link / Chrome won't launch in the remote desktop (Selkie)
+In the Selkie remote desktop, Antigravity opens URLs through a PATH shim at
+`/config/automata/bin/shim`. If clicking a link (or an AGY "open in browser"
+action) does nothing and no browser window appears, the shim is exiting without
+launching a browser. The known-bad version captures the URL and then hits an
+`exit 0` **before** the block that launches Chrome, so it only ever opens a
+browser when the `AG_URL_HANDLER` env var happens to be set — otherwise the link
+is silently dropped.
+
+The fix routes the URL to `AG_URL_HANDLER` when set, and **falls back to Google
+Chrome** otherwise (no stray `exit 0`). A corrected copy ships with this skill at
+`assets/shim`. Install it and make it executable:
+
+```bash
+install -m 0755 <this-skill-dir>/assets/shim /config/automata/bin/shim
+# or, if editing in place, ensure the file ends with this and has NO `exit 0`
+# before it:
+#   printf '%s\n' "$1" >> "${AG_URL_CAPTURE:-/tmp/ag_opened_urls.txt}"
+#   if [ -n "$AG_URL_HANDLER" ]; then exec "$AG_URL_HANDLER" "$@"
+#   else exec /usr/bin/google-chrome --no-sandbox "$@"; fi
+chmod +x /config/automata/bin/shim   # if you edited it in place
+```
+
+The `exec` lines forward `"$@"` (all arguments) so flags or multiple URLs aren't
+dropped, while only the URL (`"$1"`) is written to the capture log.
+
+Verify: click a link in Antigravity (or run `/config/automata/bin/shim
+https://example.com`) — Chrome should open and the URL should be appended to
+`/tmp/ag_opened_urls.txt`.
 
 ### Antigravity / MCP behaving oddly right after install
 If you just installed agents-cli or the Developer Knowledge MCP, **restart
