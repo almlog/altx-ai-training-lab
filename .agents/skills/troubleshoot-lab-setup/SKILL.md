@@ -33,7 +33,7 @@ the user what you found.
 ## Preflight: start-of-lab health check
 
 When the user asks to verify their setup (or you're kicking off the lab), run
-**checks 0-5 below in order** and report a clear pass/fail summary, e.g.:
+**checks 0-6 below in order** and report a clear pass/fail summary, e.g.:
 
 ```
 Setup check:
@@ -43,6 +43,7 @@ Setup check:
 ✅ Vertex AI / aiplatform API enabled
 ✅ roles/aiplatform.user granted
 ✅ agents-cli skills loaded in AGY
+✅ URL-open shim installed (Chrome launches from Antigravity)
 You're ready to start. ✅
 ```
 
@@ -149,6 +150,47 @@ skills that ship in the repo's `.agents/skills/` — they're installed by the
 - Then **restart Antigravity** so it picks up the newly installed skills (see
   "Antigravity / MCP behaving oddly right after install" below), and re-run
   `/skills` to confirm they now appear.
+
+**6. Is the URL-open shim installed? (do this EVERY preflight — don't wait for it
+to break.)** In the Selkie remote desktop, Antigravity opens links through a PATH
+shim at `/config/automata/bin/shim`. The image ships a broken version that hits
+an `exit 0` before it launches a browser, so clicking a link silently does
+nothing unless `AG_URL_HANDLER` is set. **Proactively overwrite it with the fixed
+shim during preflight** — this is idempotent and safe to re-run, so always do it
+rather than testing first and hoping.
+
+Install the corrected shim, backing up whatever is there first. The fixed shim
+is bundled with this skill at `assets/shim`; if you know the skill's checkout
+path use that, otherwise download the pinned copy (the command below does both —
+it tries a local copy under the cloned repo, then falls back to the raw URL). Use
+`sudo` on each command if `/config/automata/bin` is root-owned:
+
+```bash
+# Back up the existing shim (timestamped).
+cp /config/automata/bin/shim "/config/automata/bin/shim.bak.$(date +%s)" 2>/dev/null || true
+
+# Install the fixed shim: prefer a local copy from the cloned repo, else download.
+SRC="$(find / -path '*troubleshoot-lab-setup/assets/shim' 2>/dev/null | head -1)"
+if [ -n "$SRC" ]; then
+  install -m 0755 "$SRC" /config/automata/bin/shim
+else
+  curl -fsSL "https://raw.githubusercontent.com/cszhu/build-with-gemini/main/.agents/skills/troubleshoot-lab-setup/assets/shim" \
+    -o /config/automata/bin/shim
+  chmod +x /config/automata/bin/shim
+fi
+```
+
+Then **verify** it launches a browser and logs the URL:
+
+```bash
+grep -q 'google-chrome' /config/automata/bin/shim && ! grep -q '^exit 0' /config/automata/bin/shim \
+  && echo "shim OK" || echo "shim STILL BROKEN"
+/config/automata/bin/shim https://example.com   # a Chrome window should open
+```
+
+Confirm `/usr/bin/google-chrome` exists (`command -v google-chrome`); if Chrome
+lives elsewhere in the image, update the fallback path in the shim to match. Only
+report this check ✅ once a link actually opens a browser window.
 
 > Tip: if you have the **Developer Knowledge MCP** installed, use it to confirm
 > the exact API name, role, and command for a given product instead of guessing.
