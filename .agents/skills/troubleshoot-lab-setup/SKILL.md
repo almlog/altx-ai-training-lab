@@ -43,7 +43,7 @@ Setup check:
 ✅ Vertex AI / aiplatform API enabled
 ✅ roles/aiplatform.user granted
 ✅ agents-cli skills loaded in AGY
-✅ URL-open shim installed (Chrome launches from Antigravity)
+✅ URL-open interceptors installed as files (xdg-open + shim; Chrome launches from Antigravity)
 You're ready to start. ✅
 ```
 
@@ -151,43 +151,58 @@ skills that ship in the repo's `.agents/skills/` — they're installed by the
   "Antigravity / MCP behaving oddly right after install" below), and re-run
   `/skills` to confirm they now appear.
 
-**6. Is the URL-open shim installed? (do this EVERY preflight — don't wait for it
-to break.)** In the Selkie remote desktop, Antigravity opens links through a PATH
-shim at `/config/automata/bin/shim`. The image ships a broken version that hits
-an `exit 0` before it launches a browser, so clicking a link silently does
-nothing unless `AG_URL_HANDLER` is set. **Proactively overwrite it with the fixed
-shim during preflight** — this is idempotent and safe to re-run, so always do it
-rather than testing first and hoping.
+**6. Are the URL-open interceptors installed as executable FILES? (do this EVERY
+preflight — don't wait for it to break.)** In the Selkie remote desktop,
+Antigravity opens links through two PATH entries — **`/config/automata/bin/xdg-open`**
+(what the desktop actually calls to open a URL) and **`/config/automata/bin/shim`**.
+Two separate failure modes have been seen:
 
-The corrected shim is bundled with this skill at `assets/shim` — it's already on
-disk in the cloned lab repo, so just locate and install it (no download needed).
-Back up whatever is there first. Use `sudo` on each command if
-`/config/automata/bin` is root-owned:
+- The script hits an `exit 0` before it launches a browser (only opens a browser
+  when `AG_URL_HANDLER` is set, silently drops the link otherwise).
+- **The path ships as a *directory* instead of a file.** This is the nasty one:
+  a directory at `/config/automata/bin/shim` can't be executed, AND naively
+  copying a file onto it (`cp`/`install <src> <dir>`) drops the file *inside* the
+  directory (`.../shim/shim`) instead of replacing it — so the fix appears to run
+  but nothing actually changes.
+
+**Proactively install the corrected script to BOTH paths during preflight**,
+replacing whatever is there (file *or* directory). This is idempotent — always do
+it rather than testing first and hoping. The corrected script is bundled with
+this skill at `assets/shim` (already on disk in the cloned repo; no download
+needed). Use `sudo` on each command if `/config/automata/bin` is root-owned:
 
 ```bash
-# Back up the existing shim (timestamped).
-cp /config/automata/bin/shim "/config/automata/bin/shim.bak.$(date +%s)" 2>/dev/null || true
-
-# Locate this skill's bundled shim on disk and install it.
+# Locate this skill's bundled script on disk.
 SRC="$(find / -path '*troubleshoot-lab-setup/assets/shim' 2>/dev/null | head -1)"
 if [ -z "$SRC" ]; then
   echo "Could not find the bundled shim — is the lab repo cloned? Aborting." >&2
 else
-  install -m 0755 "$SRC" /config/automata/bin/shim
-  echo "Installed fixed shim from $SRC"
+  for target in /config/automata/bin/xdg-open /config/automata/bin/shim; do
+    # mv aside whatever's there — handles a FILE or a DIRECTORY, unlike cp/install.
+    [ -e "$target" ] && mv "$target" "${target}.bak.$(date +%s)"
+    install -m 0755 "$SRC" "$target"
+    echo "Installed $target from $SRC"
+  done
 fi
 ```
 
-Then **verify** it launches a browser and logs the URL:
+Then **verify** both are regular executable files (not directories) and that a URL
+actually opens a browser:
 
 ```bash
-grep -q 'google-chrome' /config/automata/bin/shim && ! grep -q '^exit 0' /config/automata/bin/shim \
-  && echo "shim OK" || echo "shim STILL BROKEN"
-/config/automata/bin/shim https://example.com   # a Chrome window should open
+for target in /config/automata/bin/xdg-open /config/automata/bin/shim; do
+  if [ -f "$target" ] && [ -x "$target" ] && grep -q 'google-chrome' "$target" \
+     && ! grep -q '^exit 0' "$target"; then
+    echo "$target OK"
+  else
+    echo "$target STILL BROKEN (directory? not executable? old script?)"
+  fi
+done
+xdg-open https://example.com   # a Chrome window should open; URL logged to /tmp/ag_opened_urls.txt
 ```
 
 Confirm `/usr/bin/google-chrome` exists (`command -v google-chrome`); if Chrome
-lives elsewhere in the image, update the fallback path in the shim to match. Only
+lives elsewhere in the image, update the path in `assets/shim` to match. Only
 report this check ✅ once a link actually opens a browser window.
 
 > Tip: if you have the **Developer Knowledge MCP** installed, use it to confirm
@@ -355,34 +370,39 @@ and shows the public URL. Two things must hold:
    buckets and the public-URL approach will not work there.
 
 ### Antigravity can't open a link / Chrome won't launch in the remote desktop (Selkie)
-In the Selkie remote desktop, Antigravity opens URLs through a PATH shim at
+In the Selkie remote desktop, Antigravity opens URLs through two PATH entries —
+`/config/automata/bin/xdg-open` (what the desktop calls) and
 `/config/automata/bin/shim`. If clicking a link (or an AGY "open in browser"
-action) does nothing and no browser window appears, the shim is exiting without
-launching a browser. The known-bad version captures the URL and then hits an
-`exit 0` **before** the block that launches Chrome, so it only ever opens a
-browser when the `AG_URL_HANDLER` env var happens to be set — otherwise the link
-is silently dropped.
+action) does nothing and no window appears, one of two things is wrong:
 
-The fix routes the URL to `AG_URL_HANDLER` when set, and **falls back to Google
-Chrome** otherwise (no stray `exit 0`). A corrected copy ships with this skill at
-`assets/shim`. Install it and make it executable:
+1. **The script exits before launching a browser** — the known-bad version hits
+   an `exit 0` before the Chrome block, so it only opens a browser when
+   `AG_URL_HANDLER` is set and silently drops the link otherwise.
+2. **The path is a *directory*, not a file** — it can't be executed, and copying a
+   file onto it lands *inside* the directory (`.../shim/shim`) instead of
+   replacing it, so a naive fix looks applied but changes nothing.
+
+The corrected script (routes to `AG_URL_HANDLER` if set, else `google-chrome`,
+no stray `exit 0`, forwards `"$@"`) ships with this skill at `assets/shim`.
+**Install it to BOTH paths, replacing a file or a directory** — this is the same
+thing preflight check 6 does, so just run that block. Quick manual version:
 
 ```bash
-install -m 0755 <this-skill-dir>/assets/shim /config/automata/bin/shim
-# or, if editing in place, ensure the file ends with this and has NO `exit 0`
-# before it:
-#   printf '%s\n' "$1" >> "${AG_URL_CAPTURE:-/tmp/ag_opened_urls.txt}"
-#   if [ -n "$AG_URL_HANDLER" ]; then exec "$AG_URL_HANDLER" "$@"
-#   else exec /usr/bin/google-chrome --no-sandbox "$@"; fi
-chmod +x /config/automata/bin/shim   # if you edited it in place
+SRC="$(find / -path '*troubleshoot-lab-setup/assets/shim' 2>/dev/null | head -1)"
+for target in /config/automata/bin/xdg-open /config/automata/bin/shim; do
+  [ -e "$target" ] && mv "$target" "${target}.bak.$(date +%s)"   # mv handles dir OR file
+  install -m 0755 "$SRC" "$target"
+done
 ```
 
 The `exec` lines forward `"$@"` (all arguments) so flags or multiple URLs aren't
 dropped, while only the URL (`"$1"`) is written to the capture log.
 
-Verify: click a link in Antigravity (or run `/config/automata/bin/shim
-https://example.com`) — Chrome should open and the URL should be appended to
-`/tmp/ag_opened_urls.txt`.
+Verify: run `xdg-open https://example.com` (or click a link in Antigravity) —
+Chrome should open and the URL should be appended to `/tmp/ag_opened_urls.txt`.
+If it still fails, confirm both paths are regular files: `file
+/config/automata/bin/xdg-open /config/automata/bin/shim` (neither should say
+"directory").
 
 ### Antigravity / MCP behaving oddly right after install
 If you just installed agents-cli or the Developer Knowledge MCP, **restart
