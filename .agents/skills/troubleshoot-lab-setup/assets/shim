@@ -1,0 +1,13 @@
+#!/bin/bash
+# PATH shim: capture URLs Antigravity asks the desktop to open, and route them
+# to the automation's dedicated browser (AG_URL_HANDLER) when one is set,
+# otherwise fall back to Google Chrome so the link still opens.
+#
+# Install location (Selkie remote desktop): /config/automata/bin/shim
+# Must be executable:  chmod +x /config/automata/bin/shim
+printf '%s\n' "$1" >> "${AG_URL_CAPTURE:-/tmp/ag_opened_urls.txt}"
+if [ -n "$AG_URL_HANDLER" ]; then
+    exec "$AG_URL_HANDLER" "$@"
+else
+    exec /usr/bin/google-chrome --no-sandbox "$@"
+fi

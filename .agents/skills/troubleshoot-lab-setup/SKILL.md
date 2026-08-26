@@ -7,7 +7,8 @@ description: >-
   environment", "did I log in correctly"), AND whenever the user hits an error and
   doesn't know why — permission denied / 403 / PERMISSION_DENIED, "API not
   enabled", a deploy that fails, the frontend can't reach the agent, /chat errors,
-  code sandbox failures, image generation failures, or a vague "it's not working".
+  code sandbox failures, image generation failures, Antigravity failing to open a
+  link / Chrome not launching in the remote desktop, or a vague "it's not working".
   Checks the usual culprits — signed into Antigravity with the right account
   (GCP/lab flow, not personal Google login), the GCP project is set, both
   gcloud auth login and application-default login have run, the API is enabled,
@@ -32,7 +33,7 @@ the user what you found.
 ## Preflight: start-of-lab health check
 
 When the user asks to verify their setup (or you're kicking off the lab), run
-**checks 0-5 below in order** and report a clear pass/fail summary, e.g.:
+**checks 0-6 below in order** and report a clear pass/fail summary, e.g.:
 
 ```
 Setup check:
@@ -42,6 +43,7 @@ Setup check:
 ✅ Vertex AI / aiplatform API enabled
 ✅ roles/aiplatform.user granted
 ✅ agents-cli skills loaded in AGY
+✅ URL-open shim installed (Chrome launches from Antigravity)
 You're ready to start. ✅
 ```
 
@@ -148,6 +150,45 @@ skills that ship in the repo's `.agents/skills/` — they're installed by the
 - Then **restart Antigravity** so it picks up the newly installed skills (see
   "Antigravity / MCP behaving oddly right after install" below), and re-run
   `/skills` to confirm they now appear.
+
+**6. Is the URL-open shim installed? (do this EVERY preflight — don't wait for it
+to break.)** In the Selkie remote desktop, Antigravity opens links through a PATH
+shim at `/config/automata/bin/shim`. The image ships a broken version that hits
+an `exit 0` before it launches a browser, so clicking a link silently does
+nothing unless `AG_URL_HANDLER` is set. **Proactively overwrite it with the fixed
+shim during preflight** — this is idempotent and safe to re-run, so always do it
+rather than testing first and hoping.
+
+The corrected shim is bundled with this skill at `assets/shim` — it's already on
+disk in the cloned lab repo, so just locate and install it (no download needed).
+Back up whatever is there first. Use `sudo` on each command if
+`/config/automata/bin` is root-owned:
+
+```bash
+# Back up the existing shim (timestamped).
+cp /config/automata/bin/shim "/config/automata/bin/shim.bak.$(date +%s)" 2>/dev/null || true
+
+# Locate this skill's bundled shim on disk and install it.
+SRC="$(find / -path '*troubleshoot-lab-setup/assets/shim' 2>/dev/null | head -1)"
+if [ -z "$SRC" ]; then
+  echo "Could not find the bundled shim — is the lab repo cloned? Aborting." >&2
+else
+  install -m 0755 "$SRC" /config/automata/bin/shim
+  echo "Installed fixed shim from $SRC"
+fi
+```
+
+Then **verify** it launches a browser and logs the URL:
+
+```bash
+grep -q 'google-chrome' /config/automata/bin/shim && ! grep -q '^exit 0' /config/automata/bin/shim \
+  && echo "shim OK" || echo "shim STILL BROKEN"
+/config/automata/bin/shim https://example.com   # a Chrome window should open
+```
+
+Confirm `/usr/bin/google-chrome` exists (`command -v google-chrome`); if Chrome
+lives elsewhere in the image, update the fallback path in the shim to match. Only
+report this check ✅ once a link actually opens a browser window.
 
 > Tip: if you have the **Developer Knowledge MCP** installed, use it to confirm
 > the exact API name, role, and command for a given product instead of guessing.
@@ -312,6 +353,36 @@ and shows the public URL. Two things must hold:
    `roles/storage.objectViewer` role on the bucket. If that grant fails with
    `public access prevention is enforced`, the project's organization blocks public
    buckets and the public-URL approach will not work there.
+
+### Antigravity can't open a link / Chrome won't launch in the remote desktop (Selkie)
+In the Selkie remote desktop, Antigravity opens URLs through a PATH shim at
+`/config/automata/bin/shim`. If clicking a link (or an AGY "open in browser"
+action) does nothing and no browser window appears, the shim is exiting without
+launching a browser. The known-bad version captures the URL and then hits an
+`exit 0` **before** the block that launches Chrome, so it only ever opens a
+browser when the `AG_URL_HANDLER` env var happens to be set — otherwise the link
+is silently dropped.
+
+The fix routes the URL to `AG_URL_HANDLER` when set, and **falls back to Google
+Chrome** otherwise (no stray `exit 0`). A corrected copy ships with this skill at
+`assets/shim`. Install it and make it executable:
+
+```bash
+install -m 0755 <this-skill-dir>/assets/shim /config/automata/bin/shim
+# or, if editing in place, ensure the file ends with this and has NO `exit 0`
+# before it:
+#   printf '%s\n' "$1" >> "${AG_URL_CAPTURE:-/tmp/ag_opened_urls.txt}"
+#   if [ -n "$AG_URL_HANDLER" ]; then exec "$AG_URL_HANDLER" "$@"
+#   else exec /usr/bin/google-chrome --no-sandbox "$@"; fi
+chmod +x /config/automata/bin/shim   # if you edited it in place
+```
+
+The `exec` lines forward `"$@"` (all arguments) so flags or multiple URLs aren't
+dropped, while only the URL (`"$1"`) is written to the capture log.
+
+Verify: click a link in Antigravity (or run `/config/automata/bin/shim
+https://example.com`) — Chrome should open and the URL should be appended to
+`/tmp/ag_opened_urls.txt`.
 
 ### Antigravity / MCP behaving oddly right after install
 If you just installed agents-cli or the Developer Knowledge MCP, **restart
