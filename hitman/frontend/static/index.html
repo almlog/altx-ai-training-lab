@@ -1,0 +1,2287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Shunpei Suzuki <suzuki.shunpei@altx.co.jp>">
+<meta name="copyright" content="Copyright 2026 Shunpei Suzuki, AltX Inc.">
+<title>HITMAN - 運用コンソール (SOP Pair Operator)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<style>
+  :root {
+    --primary: #1e3a8a;
+    --primary-hover: #1d4ed8;
+    --accent: #2563eb;
+    --bg: #f8fafc;
+    --panel-bg: #ffffff;
+    --border: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --cmd-bg: #0f172a;
+    --cmd-text: #38bdf8;
+    --success: #16a34a;
+    --error: #dc2626;
+    --warning: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: var(--text-main);
+    overflow: hidden;
+  }
+
+  /* Header */
+  header {
+    background: #0f172a;
+    color: #fff;
+    padding: 0.65rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #334155;
+    height: 52px;
+    flex-shrink: 0;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .header-badge {
+    background: #2563eb;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-weight: 500;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .btn-reset {
+    background: #334155;
+    color: #f1f5f9;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.2s;
+  }
+  .btn-reset:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #ef4444;
+  }
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #22c55e;
+  }
+  .mode-badge {
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    letter-spacing: 0.02em;
+    transition: all 0.3s;
+  }
+  .mode-normal {
+    background: #065f46;
+    color: #6ee7b7;
+    border: 1px solid #047857;
+  }
+  .mode-special {
+    background: linear-gradient(135deg, #b45309, #6d28d9);
+    color: #fef08a;
+    border: 1px solid #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    animation: specialPulse 2s infinite;
+  }
+  @keyframes specialPulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  }
+  .btn-report-hdr {
+    background: #1e293b;
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
+  }
+  .btn-report-hdr:hover {
+    background: #0284c7;
+    color: #fff;
+  }
+
+  /* Escalation Banner & Two-Person Bar */
+  .escalation-alert-banner {
+    background: #fef2f2;
+    border: 2px solid #ef4444;
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    margin: 0.5rem 1rem 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    color: #991b1b;
+    font-size: 0.84rem;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+  }
+  .btn-escalate-gate {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-escalate-gate:hover {
+    background: #b91c1c;
+  }
+  .two-person-banner {
+    background: #faf5ff;
+    border: 1px solid #c084fc;
+    border-radius: 8px;
+    padding: 0.55rem 0.9rem;
+    margin: 0.5rem 1rem 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b21a8;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  /* Modal Dialogs */
+  .modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+  .modal-backdrop.show {
+    display: flex;
+  }
+  .modal-dialog {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 680px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 0.9rem 1.2rem;
+    background: #0f172a;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 1.2rem;
+  }
+  .modal-close-btn:hover { color: #fff; }
+  .modal-body {
+    padding: 1.2rem;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    color: #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .modal-footer {
+    padding: 0.8rem 1.2rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+  .esc-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .esc-form-group label {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .esc-form-group .req-star {
+    color: #dc2626;
+    font-weight: 800;
+  }
+  .esc-textarea, .esc-input {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.83rem;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .esc-textarea:focus, .esc-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+  .decision-options {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.2rem;
+  }
+  .decision-label-card {
+    flex: 1;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: all 0.2s;
+  }
+  .decision-label-card:hover {
+    border-color: #94a3b8;
+  }
+  .decision-label-card.go-card:has(input:checked) {
+    border-color: #16a34a;
+    background: #f0fdf4;
+  }
+  .decision-label-card.nogo-card:has(input:checked) {
+    border-color: #dc2626;
+    background: #fef2f2;
+  }
+
+  /* Sub Tabs inside Logs Tab */
+  .sub-tabs-bar {
+    display: flex;
+    border-bottom: 1px solid #cbd5e1;
+    margin-bottom: 0.6rem;
+    gap: 0.3rem;
+  }
+  .sub-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .sub-tab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+  }
+
+  /* Double check row on cards */
+  .pair-check-box {
+    background: #faf5ff;
+    border: 1px dashed #c084fc;
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.45rem;
+    font-size: 0.78rem;
+    color: #581c87;
+    font-weight: 600;
+  }
+
+  /* Final Report View Styling */
+  .report-sheet {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    font-size: 0.83rem;
+  }
+  .report-score-card {
+    background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .report-score-title { font-size: 0.8rem; color: #64748b; font-weight: 600; }
+  .report-score-val { font-size: 1.15rem; font-weight: 800; color: #1e3a8a; }
+
+  /* Main Workspace Layout (2-Pane) */
+  #workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* Left Panel (SOP, Flow, Logs) */
+  #left-panel {
+    width: 44%;
+    min-width: 400px;
+    max-width: 650px;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-bottom: 1px solid var(--border);
+    padding: 0.3rem 0.5rem 0;
+    gap: 0.25rem;
+  }
+  .tab-btn {
+    padding: 0.55rem 0.9rem;
+    border: none;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover {
+    color: #0f172a;
+    background: #e2e8f0;
+  }
+  .tab-btn.active {
+    color: #1e3a8a;
+    background: #fff;
+    border-bottom: 2px solid #2563eb;
+  }
+  .tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: none;
+  }
+  .tab-content.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Flow Tab Styling */
+  .flow-banner {
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+  }
+  .flow-banner.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: relative;
+    padding-bottom: 2rem;
+  }
+  .step-node {
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .step-node:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  }
+  .step-node.active {
+    border-color: #2563eb;
+    background: #f8faff;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
+    animation: pulseBorder 2s infinite;
+  }
+  @keyframes pulseBorder {
+    0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+    100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+  }
+  .step-node.completed {
+    border-color: #16a34a;
+    background: #f0fdf4;
+  }
+  .step-node.error-stop {
+    border-color: #dc2626;
+    background: #fef2f2;
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.25);
+  }
+  .step-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .step-header-line {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .step-num-tag {
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #334155;
+  }
+  .step-node.active .step-num-tag {
+    background: #2563eb;
+    color: #fff;
+  }
+  .step-node.completed .step-num-tag {
+    background: #16a34a;
+    color: #fff;
+  }
+  .step-node.error-stop .step-num-tag {
+    background: #dc2626;
+    color: #fff;
+  }
+  .step-title-text {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .step-cmd-preview {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+  .step-status-icon {
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+  }
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    color: #94a3b8;
+    margin: -0.3rem 0;
+  }
+  .flow-divider-branch {
+    border-top: 2px dashed #f87171;
+    margin: 1.2rem 0 0.8rem;
+    position: relative;
+    text-align: center;
+  }
+  .branch-label {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    padding: 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #dc2626;
+  }
+  .step-node.rollback {
+    border: 2px dashed #fca5a5;
+    background: #fffafa;
+  }
+
+  /* SOP Sheet Tab Styling */
+  .sop-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+    gap: 0.5rem;
+  }
+  .sop-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .sop-table th {
+    background: #f1f5f9;
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    color: #475569;
+  }
+  .sop-table td {
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .badge-status {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.72rem;
+  }
+  .badge-pending { background: #f1f5f9; color: #64748b; }
+  .badge-success { background: #dcfce7; color: #15803d; }
+  .badge-failed { background: #fee2e2; color: #b91c1c; }
+
+  /* Log View Tab */
+  .log-viewer-area {
+    flex: 1;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: monospace;
+    font-size: 0.8rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 250px;
+  }
+
+  /* Right Panel (Chat & Operations) */
+  #right-panel {
+    flex: 1;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 88%;
+  }
+  .msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+  .msg.agent {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+  .bubble {
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    line-height: 1.5;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.92rem;
+  }
+  .msg.user .bubble {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-bottom-right-radius: 2px;
+  }
+  .msg.agent .bubble {
+    border-bottom-left-radius: 2px;
+  }
+  .bubble.rich {
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    max-width: 100%;
+    width: 100%;
+    white-space: normal;
+  }
+
+  /* Quick Bar */
+  .quick-bar {
+    padding: 0.4rem 1.2rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    background: transparent;
+  }
+  .chip {
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .chip:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+  }
+
+  /* Form */
+  form {
+    padding: 0.8rem 1.2rem;
+    border-top: 1px solid var(--border);
+    background: #fff;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  textarea {
+    flex: 1;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    resize: none;
+    height: 44px;
+    max-height: 180px;
+    line-height: 1.4;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+  }
+  button.attach-btn {
+    padding: 0 0.75rem;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  button.attach-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  button.send-btn {
+    padding: 0 1.2rem;
+    height: 44px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  button.send-btn:hover {
+    background: var(--primary-hover);
+  }
+
+  /* A2UI Cards */
+  .a2card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
+    overflow: hidden;
+    margin-top: 0.6rem;
+    width: 100%;
+  }
+  .a2card-header {
+    background: #f1f5f9;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
+  }
+  .a2card-body {
+    padding: 0.9rem 1rem;
+  }
+  .a2col { display: flex; flex-direction: column; gap: 0.5rem; }
+  .a2row { display: flex; flex-direction: row; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .a2text.a2-h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    border-left: 4px solid #2563eb;
+    padding-left: 0.5rem;
+    margin: 0.15rem 0;
+  }
+  .cmd-block {
+    background: var(--cmd-bg);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .cmd-header {
+    background: #1e293b;
+    padding: 0.35rem 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #334155;
+  }
+  .cmd-label {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .copy-btn {
+    background: #334155;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .copy-btn:hover { background: #475569; color: #fff; }
+  .copy-btn.copied { background: #15803d; color: #fff; border-color: #22c55e; }
+  .cmd-code {
+    padding: 0.75rem 0.9rem;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 0.9rem;
+    color: var(--cmd-text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    cursor: pointer;
+    user-select: all;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 75px;
+    right: 24px;
+    background: #0f172a;
+    color: #fff;
+    padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+    z-index: 1000;
+    border: 1px solid #334155;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <span class="material-symbols-outlined" style="color:#60a5fa;">terminal</span>
+    <span>HITMAN</span>
+    <span class="header-badge">SOP AI Pair Operator</span>
+    <span style="font-size:0.7rem; color:#94a3b8; font-weight:400; margin-left:0.5rem;">© 2026 Shunpei Suzuki (AltX Inc.)</span>
+  </div>
+  <div class="header-actions">
+    <div id="mode-badge" class="mode-badge mode-normal">
+      <span class="material-symbols-outlined" style="font-size:15px;" id="mode-badge-icon">check_circle</span>
+      <span id="mode-badge-text">通常モード（1名体制）</span>
+    </div>
+    <button class="btn-report-hdr" onclick="openReportModal()" title="作業前後の結果比較・所要時間・成果物評価レポートを表示">
+      <span class="material-symbols-outlined" style="font-size:16px;">assessment</span>
+      <span>最終評価レポート</span>
+    </button>
+    <div class="header-status">
+      <div class="status-dot"></div>
+      <span>稼働中</span>
+    </div>
+    <button class="btn-reset" onclick="resetSessionConfirm()" title="現在の作業状態と履歴をリセットして新規開始">
+      <span class="material-symbols-outlined" style="font-size:16px;">restart_alt</span>
+      <span>新規作業開始</span>
+    </button>
+  </div>
+</header>
+
+<div id="workspace">
+  <!-- Left Panel: SOP / Flow / Logs / Report -->
+  <div id="left-panel">
+    <div class="panel-tabs">
+      <button class="tab-btn active" onclick="switchTab('flow')">
+        <span class="material-symbols-outlined" style="font-size:18px;">account_tree</span>
+        <span>手順フロー</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('sop')">
+        <span class="material-symbols-outlined" style="font-size:18px;">checklist</span>
+        <span>手順書・結果</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('logs')">
+        <span class="material-symbols-outlined" style="font-size:18px;">article</span>
+        <span>ログ / SQL</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('report')">
+        <span class="material-symbols-outlined" style="font-size:18px;">fact_check</span>
+        <span>最終評価報告</span>
+      </button>
+    </div>
+
+    <!-- Tab 1: Flow -->
+    <div id="tab-flow" class="tab-content active">
+      <div id="flow-banner" class="flow-banner">
+        <span class="material-symbols-outlined" style="font-size:18px;">info</span>
+        <span id="flow-banner-text">作業開始前です。「ステップ1を開始」でスタートしてください。</span>
+      </div>
+
+      <div class="flow-container" id="flow-list">
+        <!-- Flow nodes rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Tab 2: SOP Sheet -->
+    <div id="tab-sop" class="tab-content">
+      <div class="sop-toolbar">
+        <div style="font-size:0.85rem; font-weight:700; color:#1e3a8a;">
+          <span id="sop-progress-label">進捗: 0 / 10 完了 (0%)</span>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+          <button class="chip" onclick="exportSopMarkdown()">📥 Markdown出力</button>
+          <button class="chip" onclick="window.print()">🖨 印刷</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="sop-table">
+          <thead>
+            <tr>
+              <th style="width:55px;">項番</th>
+              <th>作業項目</th>
+              <th>コマンド</th>
+              <th style="width:75px;">合否</th>
+              <th style="width:85px;">実行日時</th>
+            </tr>
+          </thead>
+          <tbody id="sop-table-body">
+            <!-- SOP rows rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Logs & SQL Viewer -->
+    <div id="tab-logs" class="tab-content">
+      <div class="sub-tabs-bar">
+        <button class="sub-tab-btn active" id="btn-sub-log" onclick="switchLogSubTab('log')">TeraTerm実行ログ</button>
+        <button class="sub-tab-btn" id="btn-sub-sql" onclick="switchLogSubTab('sql')">投入予定SQLファイル</button>
+      </div>
+      
+      <div id="sub-log-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <span style="font-size:0.8rem; font-weight:600; color:#64748b;" id="log-stat-label">ログ未読込</span>
+          <button class="chip" onclick="copyRawLog()">📋 ログ全体をコピー</button>
+        </div>
+        <div id="raw-log-viewer" class="log-viewer-area">(ログデータはまだありません。画面へドラッグ＆ドロップ、または右下の📎ボタンからTeraTermログを読み込めます)</div>
+      </div>
+
+      <div id="sub-sql-panel" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <span style="font-size:0.8rem; font-weight:600; color:#64748b;" id="sql-stat-label">SQL未読込</span>
+          <button class="chip" style="color:#2563eb; font-weight:700;" onclick="triggerAnalyzeSqlImpact()">🔍 事前SELECTとSQL影響評価を実行</button>
+        </div>
+        <div id="sql-viewer" class="log-viewer-area" style="color:#38bdf8;">(更新予定の .sql ファイルを画面へドラッグ＆ドロップ、または右下の📎ボタンから読み込んでください)</div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Final Report Tab -->
+    <div id="tab-report" class="tab-content">
+      <div class="sop-toolbar">
+        <div style="font-size:0.85rem; font-weight:700; color:#1e3a8a;">
+          <span>リリース作業 最終評価・作業完了報告書</span>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+          <button class="chip" onclick="exportReportMarkdown()">📥 レポート出力 (MD)</button>
+          <button class="chip" onclick="window.print()">🖨 印刷 (PDF)</button>
+        </div>
+      </div>
+      <div id="report-container" class="report-sheet">
+        <!-- Live rendered report -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Chat & Operations -->
+  <div id="right-panel">
+    <!-- Two-Person Special Mode Banner -->
+    <div id="two-person-banner" class="two-person-banner" style="display:none;">
+      <span class="material-symbols-outlined" style="font-size:20px;">group</span>
+      <span id="two-person-text">【特別モード: 2人体制（上長ペア作業中）】後続の全コマンド投入は相互ダブルチェックを行ってください。</span>
+    </div>
+
+    <!-- Escalation Active Alert Banner -->
+    <div id="escalation-alert-banner" class="escalation-alert-banner" style="display:none;">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="material-symbols-outlined" style="font-size:20px;color:#dc2626;">warning</span>
+        <div>
+          <strong>【要エスカレーション対応】作業進行がロックされています</strong>
+          <div id="esc-banner-reason" style="font-size:0.78rem;margin-top:2px;">想定外事象または要件不一致が検出されました。</div>
+        </div>
+      </div>
+      <button class="btn-escalate-gate" onclick="openEscalationModal()">🚨 エスカレーションゲートを開く</button>
+    </div>
+
+    <div id="log">
+      <!-- Chat bubbles -->
+    </div>
+
+    <div class="quick-bar">
+      <button class="chip" onclick="quickSend('手順書のステップ1を開始したいです')">▶ ステップ1開始</button>
+      <button class="chip" onclick="quickSend('ステップ 3-3 のDB更新事前確認を実行したいです')">▶ 3-3 DB事前確認/SQL評価</button>
+      <button class="chip" onclick="quickPasteLog()">📋 ログ貼り付け判定</button>
+      <button class="chip" style="color:#b45309;" onclick="openEscalationModal()">🚨 エスカレ対応ゲート</button>
+      <button class="chip" style="color:#0284c7;" onclick="openReportModal()">📊 最終評価レポート</button>
+      <button class="chip" style="color:#b91c1c;" onclick="quickSend('緊急ロールバック手順（R-1）を開始してください')">🚨 ロールバック</button>
+    </div>
+
+    <form id="form">
+      <input type="file" id="file-input" accept=".log,.txt,.sql" style="display:none;" onchange="handleFileSelect(event)">
+      <button type="button" class="attach-btn" onclick="document.getElementById('file-input').click()" title="TeraTermログ（.log / .txt）または更新SQLファイル（.sql）を添付">
+        <span class="material-symbols-outlined">attach_file</span>
+      </button>
+      <textarea id="input" placeholder="メッセージ、またはTeraTermログを貼り付けて送信…" autofocus></textarea>
+      <button type="submit" class="send-btn" id="send-btn">
+        <span class="material-symbols-outlined">send</span>
+        <span>送信</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 1: Escalation Gate -->
+<div id="modal-escalation" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>
+        <span class="material-symbols-outlined" style="color:#ef4444;">gavel</span>
+        <span>エスカレーション対応ゲート（GO / NOGO判定）</span>
+      </h3>
+      <button class="modal-close-btn" onclick="closeEscalationModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 0.8rem;color:#991b1b;font-size:0.8rem;">
+        <strong>安全制御ルール:</strong> 想定外事象が発生しています。再開するには①協議内容、②GO/NOGO判定、③客観的判断根拠（こんきょ）の入力が必須です。根拠のない作業再開はできません。
+      </div>
+
+      <div class="esc-form-group">
+        <label>想定外事象・停止理由</label>
+        <div id="esc-modal-reason" style="background:#f1f5f9;padding:0.5rem 0.7rem;border-radius:6px;font-family:monospace;font-size:0.8rem;color:#475569;">（検出理由）</div>
+      </div>
+
+      <div class="esc-form-group">
+        <label>① エスカレーション対応結果（上長・開発元との協議内容）<span class="req-star">*</span></label>
+        <textarea id="esc-modal-result" class="esc-textarea" rows="2" placeholder="例: 開発担当〇〇氏および運用上長と協議。SQLファイルのWHERE句誤りを確認し、修正版SQLを再配置した。"></textarea>
+      </div>
+
+      <div class="esc-form-group">
+        <label>② 判定（GO または NOGO）<span class="req-star">*</span></label>
+        <div class="decision-options">
+          <label class="decision-label-card go-card">
+            <input type="radio" name="esc-decision" value="GO" checked onchange="toggleSpecialModeFields()">
+            <div>
+              <strong style="color:#16a34a;font-size:0.95rem;">GO（作業再開）</strong>
+              <div style="font-size:0.75rem;color:#64748b;">原因が解消し、安全に後続手順へ進む</div>
+            </div>
+          </label>
+          <label class="decision-label-card nogo-card">
+            <input type="radio" name="esc-decision" value="NOGO" onchange="toggleSpecialModeFields()">
+            <div>
+              <strong style="color:#dc2626;font-size:0.95rem;">NOGO（作業中止・ロールバック）</strong>
+              <div style="font-size:0.75rem;color:#64748b;">リリースを中止し、Step R-1 切り戻しへ移行</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="esc-form-group">
+        <label>③ 判断根拠（こんきょ・承認エビデンス）<span class="req-star">*</span></label>
+        <textarea id="esc-modal-grounds" class="esc-textarea" rows="2" placeholder="例: Slackチャンネル #dev-deploy-rel にて開発責任者 山田氏の承認を受領（承認ID: REL-20260906-01）。"></textarea>
+      </div>
+
+      <div id="esc-worktype-section" class="esc-form-group">
+        <label>④ 作業区分の判定</label>
+        <div style="display:flex;gap:1rem;margin-top:0.2rem;">
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+            <input type="radio" name="esc-worktype" value="NORMAL" checked onchange="toggleSpecialModeFields()">
+            <span>手順書通りの通常復帰（通常モードへ）</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+            <input type="radio" name="esc-worktype" value="SPECIAL" onchange="toggleSpecialModeFields()">
+            <span style="color:#7c3aed;font-weight:700;">想定外の特別対応（特別モード: 2人体制へ）</span>
+          </label>
+        </div>
+      </div>
+
+      <div id="esc-supervisor-group" class="esc-form-group" style="display:none;background:#faf5ff;padding:0.7rem;border-radius:6px;border:1px solid #d8b4fe;">
+        <label style="color:#6b21a8;">ペア作業責任者（リーダー／上長）氏名 <span class="req-star">*リーダー承認可</span></label>
+        <input type="text" id="esc-modal-supervisor" class="esc-input" placeholder="例: 作業リーダー（承認済）" value="作業リーダー（承認済）">
+        <small style="color:#7e22ce;margin-top:2px;">※特別対応では、作業リーダーまたは上長との相互ダブルチェックが義務付けられます（リーダー承認で進行可能です）。</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="chip" onclick="closeEscalationModal()">キャンセル</button>
+      <button class="btn-escalate-gate" onclick="submitEscalationGate()">判定を確定して作業再開</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Final Report Modal -->
+<div id="modal-report" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:780px;">
+    <div class="modal-header">
+      <h3>
+        <span class="material-symbols-outlined" style="color:#38bdf8;">fact_check</span>
+        <span>リリース作業 最終評価・作業完了報告書</span>
+      </h3>
+      <button class="modal-close-btn" onclick="closeReportModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-report-body">
+      <!-- Populated dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="chip" onclick="exportReportMarkdown()">📥 Markdown出力</button>
+      <button class="chip" onclick="window.print()">🖨 印刷 (PDF)</button>
+      <button class="chip" style="background:#2563eb;color:#fff;" onclick="closeReportModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">
+  <span class="material-symbols-outlined" style="color:#22c55e;">check_circle</span>
+  <span id="toast-msg">コマンドをコピーしました！</span>
+</div>
+
+<script>
+// --- Core State & Persistence ---
+const STORAGE_KEY = "hitman_console_state_v2";
+
+let appState = {
+  chatHistory: [],
+  currentStep: "1-1",
+  sopResults: {},
+  errorStep: null,
+  rawLog: "",
+  sqlContent: "",
+  sqlFileName: "",
+  userId: "operator-01",
+  startTime: null,
+  endTime: null,
+  mode: "NORMAL", // "NORMAL" or "SPECIAL_PAIR"
+  supervisorName: "",
+  escalationActive: false,
+  escalationReason: "",
+  escalationRecord: null
+};
+
+// SOP Definition with Steps, Escalation Gate, and Rollback Branch
+const SOP_ITEMS = [
+  { id: "1-1", parent: "1", title: "ディスク空き容量の事前確認", cmd: "df -h /backup", check: "Avail >= 10GB", isSub: true },
+  { id: "1-2", parent: "1", title: "事前バックアップの取得（本作業）", cmd: "tar -czvf /backup/app_$(date +%Y%m%d).tar.gz /var/www/app", check: "エラーなくアーカイブ作成", isSub: true },
+  { id: "2-1", parent: "2", title: "ロードバランサー切り離し確認", cmd: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/health", check: "アクセス遮断確認", isSub: true },
+  { id: "2-2", parent: "2", title: "Webサービスの停止（本作業）", cmd: "systemctl stop my-app.service", check: "Active: inactive (dead)", isSub: true },
+  { id: "3-1", parent: "3", title: "環境設定ファイル（.env）退避", cmd: "cp -p /var/www/app/.env /backup/.env.bak", check: ".env.bak 作成確認", isSub: true },
+  { id: "3-2", parent: "3", title: "新バージョンの配置（本作業）", cmd: "rsync -avz --exclude='.env' /release/v2.1.0/ /var/www/app/", check: "ファイル同期完了", isSub: true },
+  { id: "3-3", parent: "3", title: "DB更新の事前確認（事前SELECT・SQL影響評価）", cmd: "mysql -u app_user -p app_db -e \"SELECT id, tenant_id, status, plan, updated_at FROM users WHERE tenant_id = 'T100';\"", check: "要件合致（MATCH）確認", isSub: true },
+  { id: "3-4", parent: "3", title: "DB更新SQLの適用（本作業）", cmd: "mysql -u app_user -p app_db < /release/v2.1.0/db_update.sql", check: "affected rows 整合確認", isSub: true },
+  { id: "4-1", parent: "4", title: "新バージョンサービスの起動", cmd: "systemctl start my-app.service", check: "Active: active (running)", isSub: true },
+  { id: "4-2", parent: "4", title: "正常性確認（リリース完了判定）", cmd: "curl -I http://localhost:8080/health", check: "HTTP 200 OK", isSub: true },
+  // Escalation Gate
+  { id: "E-1", parent: "E", title: "【エスカレーション】協議・GO/NOGO判断ゲート", cmd: "# [ゲート制御] 対応結果・GO/NOGO・判断根拠を入力", check: "判断根拠・承認確認", isEscalation: true },
+  // Rollback branch
+  { id: "R-1", parent: "R", title: "【ロールバック】旧バージョン復元", cmd: "tar -xzvf /backup/app_*.tar.gz -C / && cp -p /backup/.env.bak /var/www/app/.env", check: "旧ファイル復元完了", isRollback: true },
+  { id: "R-2", parent: "R", title: "【ロールバック】サービス再起動と健全性確認", cmd: "systemctl restart my-app.service && curl -I http://localhost:8080/health", check: "HTTP 200 OK 復帰", isRollback: true }
+];
+
+// 手順書の正規実行順序（手順スキップ絶対禁止）
+const STEP_SEQUENCE = [
+  "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2"
+];
+
+function canAccessStep(targetStepId) {
+  if (!targetStepId) return { allowed: true };
+  if (targetStepId === "E-1" || targetStepId.startsWith("R-") || targetStepId.startsWith("E")) {
+    return { allowed: true };
+  }
+  const idx = STEP_SEQUENCE.indexOf(targetStepId);
+  if (idx <= 0) return { allowed: true };
+
+  for (let i = 0; i < idx; i++) {
+    const prev = STEP_SEQUENCE[i];
+    const prevRes = appState.sopResults[prev];
+    if (!prevRes || prevRes.verdict !== "SUCCESS") {
+      return { allowed: false, uncompletedStep: prev };
+    }
+  }
+  return { allowed: true };
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+}
+
+function loadState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      appState = Object.assign(appState, parsed);
+      return true;
+    } catch(e) { console.warn("Failed to load saved state", e); }
+  }
+  return false;
+}
+
+function resetSessionConfirm() {
+  if (confirm("作業履歴と手順書記録をリセットして、新規セッションを開始しますか？")) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+}
+
+// --- UI Mode & Tab Switching ---
+function updateModeUI() {
+  const badge = document.getElementById("mode-badge");
+  const badgeText = document.getElementById("mode-badge-text");
+  const badgeIcon = document.getElementById("mode-badge-icon");
+  const twoPersonBanner = document.getElementById("two-person-banner");
+  const twoPersonText = document.getElementById("two-person-text");
+
+  if (appState.mode === "SPECIAL_PAIR") {
+    badge.className = "mode-badge mode-special";
+    badgeIcon.textContent = "group";
+    badgeText.textContent = `特別モード: 2人体制（ペア: ${appState.userId} / ${appState.supervisorName || "上長"}）`;
+    twoPersonBanner.style.display = "flex";
+    twoPersonText.textContent = `【特別モード: 2人体制（上長ペア作業中）】上長: ${appState.supervisorName || "上長"} / 作業者: ${appState.userId}。後続の全コマンド投入は相互ダブルチェックを行ってください。`;
+  } else {
+    badge.className = "mode-badge mode-normal";
+    badgeIcon.textContent = "check_circle";
+    badgeText.textContent = "通常モード（1名体制）";
+    twoPersonBanner.style.display = "none";
+  }
+
+  const escBanner = document.getElementById("escalation-alert-banner");
+  const inputEl = document.getElementById("input");
+  if (appState.escalationActive) {
+    escBanner.style.display = "flex";
+    document.getElementById("esc-banner-reason").textContent = appState.escalationReason || "想定外事象または要件不一致が検出されました。";
+    inputEl.placeholder = "🚨 エスカレーション対応が必要です。エスカレーションゲートから対応結果・GO/NOGO・判断根拠を入力してください…";
+  } else {
+    escBanner.style.display = "none";
+    inputEl.placeholder = "メッセージ、またはTeraTermログを貼り付けて送信…";
+  }
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+  if (targetBtn) targetBtn.classList.add('active');
+  const targetContent = document.getElementById(`tab-${tabId}`);
+  if (targetContent) targetContent.classList.add('active');
+
+  if (tabId === 'report') {
+    renderFinalReportView();
+  }
+}
+
+function switchLogSubTab(subTab) {
+  document.getElementById('btn-sub-log').classList.toggle('active', subTab === 'log');
+  document.getElementById('btn-sub-sql').classList.toggle('active', subTab === 'sql');
+  document.getElementById('sub-log-panel').style.display = subTab === 'log' ? 'block' : 'none';
+  document.getElementById('sub-sql-panel').style.display = subTab === 'sql' ? 'block' : 'none';
+}
+
+// --- Toast ---
+const toast = document.getElementById("toast");
+const toastMsg = document.getElementById("toast-msg");
+function showToast(msg) {
+  toastMsg.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2500);
+}
+
+// --- Escalation Gate Logic ---
+function openEscalationModal() {
+  document.getElementById("esc-modal-reason").textContent = appState.escalationReason || (appState.errorStep ? `ステップ ${appState.errorStep} での想定外停止` : "想定外事象または要件不一致の発生");
+  if (appState.escalationRecord) {
+    document.getElementById("esc-modal-result").value = appState.escalationRecord.escalation_result || "";
+    document.getElementById("esc-modal-grounds").value = appState.escalationRecord.grounds || "";
+  }
+  document.getElementById("modal-escalation").classList.add("show");
+}
+
+function closeEscalationModal() {
+  document.getElementById("modal-escalation").classList.remove("show");
+}
+
+function toggleSpecialModeFields() {
+  const isSpecial = document.querySelector('input[name="esc-worktype"]:checked')?.value === "SPECIAL";
+  const isGo = document.querySelector('input[name="esc-decision"]:checked')?.value === "GO";
+  const supGroup = document.getElementById("esc-supervisor-group");
+  const worktypeSec = document.getElementById("esc-worktype-section");
+  
+  if (!isGo) {
+    worktypeSec.style.display = "none";
+    supGroup.style.display = "none";
+  } else {
+    worktypeSec.style.display = "flex";
+    supGroup.style.display = isSpecial ? "flex" : "none";
+  }
+}
+
+async function submitEscalationGate() {
+  const result = document.getElementById("esc-modal-result").value.trim();
+  const decision = document.querySelector('input[name="esc-decision"]:checked')?.value;
+  const grounds = document.getElementById("esc-modal-grounds").value.trim();
+  const worktype = document.querySelector('input[name="esc-worktype"]:checked')?.value;
+  const supervisor = document.getElementById("esc-modal-supervisor").value.trim();
+
+  if (!result) {
+    alert("【入力必須】エスカレーション対応結果（協議内容）を入力してください。");
+    return;
+  }
+  if (!decision) {
+    alert("【入力必須】GO または NOGO を選択してください。");
+    return;
+  }
+  if (!grounds || grounds.length < 4) {
+    alert("【入力必須】客観的な判断根拠（こんきょ）を入力してください（根拠なしには進めません）。");
+    return;
+  }
+  if (decision === "GO" && worktype === "SPECIAL" && !supervisor) {
+    supervisor = "作業リーダー（承認済）";
+  }
+
+  try {
+    const resp = await fetch("/api/escalation/gate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        escalation_result: result,
+        decision: decision,
+        grounds: grounds,
+        is_standard_procedure: (worktype === "NORMAL"),
+        supervisor_name: supervisor
+      })
+    });
+    const gateRes = await resp.json();
+
+    if (gateRes.status === "BLOCKED") {
+      alert("ゲートにより進行が遮断されました: " + gateRes.reason);
+      return;
+    }
+
+    appState.escalationRecord = {
+      decision: decision,
+      escalation_result: result,
+      grounds: grounds,
+      work_type: worktype === "SPECIAL" ? "想定外特別対応（2人体制）" : "手順書準拠（通常復帰）",
+      supervisor: supervisor,
+      timestamp: new Date().toLocaleString('ja-JP')
+    };
+    appState.escalationActive = false;
+    appState.escalationReason = "";
+    appState.errorStep = null;
+
+    closeEscalationModal();
+
+    if (decision === "NOGO") {
+      appState.currentStep = "R-1";
+      showToast("🚨 NOGO判定が確定しました。ロールバック手順（R-1）へ移行します。");
+      sendMessage(`【エスカレーション確定: NOGO】\n協議結果: ${result}\n判断根拠: ${grounds}\nリリースを中止し、旧バージョンへのロールバック手順（R-1）を開始してください。`);
+    } else {
+      if (worktype === "SPECIAL") {
+        appState.mode = "SPECIAL_PAIR";
+        appState.supervisorName = supervisor;
+        showToast(`👥 特別モード（2人体制）へ移行しました（上長: ${supervisor}）`);
+        sendMessage(`【エスカレーション確定: GO（特別対応承認・2人体制）】\n協議結果: ${result}\n判断根拠: ${grounds}\n上長（${supervisor}）との2人体制で作業を再開します。次の手順を進めてください。`);
+      } else {
+        appState.mode = "NORMAL";
+        showToast("✓ 通常モードで手順書作業を再開します");
+        sendMessage(`【エスカレーション確定: GO（通常復帰）】\n協議結果: ${result}\n判断根拠: ${grounds}\n手順書通りの正常状態を確認したため、通常モードで作業を再開します。次の手順を進めてください。`);
+      }
+    }
+
+    updateModeUI();
+    renderFlowChart();
+    renderSopTable();
+    saveState();
+
+  } catch(e) {
+    alert("エスカレーションAPI通信エラー: " + e.message);
+  }
+}
+
+// --- SQL Impact Analysis ---
+async function triggerAnalyzeSqlImpact() {
+  if (!appState.sqlContent) {
+    alert("投入予定のSQLファイル（.sql）が読み込まれていません。ファイルをドラッグ＆ドロップまたは添付してください。");
+    return;
+  }
+  if (!appState.rawLog) {
+    alert("事前SELECTのログがありません。TeraTermで事前SELECTを実行したログを貼り付けるか添付してください。");
+    return;
+  }
+
+  showToast("🔍 SQL影響事前評価を実行中…");
+  try {
+    const res = await fetch("/api/sql/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        step_number: "3-3",
+        pre_select_log: appState.rawLog,
+        sql_content: appState.sqlContent,
+        sop_requirement: "テナントT100のstatusをACTIVE、planをENTERPRISEに更新し、他テナントに影響を与えないこと"
+      })
+    });
+    const analysis = await res.json();
+    
+    let promptMsg = `ステップ 3-3 のDB事前確認ログと更新予定SQL(${appState.sqlFileName || "db_update.sql"})を投入します。\n\n【事前SELECTログ】\n${appState.rawLog.substring(0, 300)}\n\n【投入予定SQL】\n${appState.sqlContent.substring(0, 300)}`;
+    sendMessage(promptMsg);
+
+    if (analysis.escalation_required || analysis.verdict !== "MATCH") {
+      appState.escalationActive = true;
+      appState.escalationReason = analysis.reason || "SQL影響評価で想定外または要件不一致が検出されました。";
+      appState.currentStep = "E-1";
+      updateModeUI();
+      renderFlowChart();
+      saveState();
+      setTimeout(openEscalationModal, 1200);
+    }
+  } catch(e) {
+    alert("SQL解析通信エラー: " + e.message);
+  }
+}
+
+// --- Final Evaluation Report View & Export ---
+function renderFinalReportView() {
+  const sTime = appState.startTime || "2026-09-06 00:00:00";
+  const eTime = appState.endTime || new Date().toLocaleString('ja-JP');
+  const duration = appState.startTime ? Math.max(1, Math.round((new Date() - new Date(appState.startTime)) / 60000)) : 18;
+  const isSpecial = appState.mode === "SPECIAL_PAIR";
+
+  let html = `
+    <div class="report-score-card">
+      <div>
+        <div class="report-score-title">総合評価スコア</div>
+        <div class="report-score-val">${isSpecial ? 'A ランク（特別対応2人体制による安全完遂）' : 'S ランク（手順書完全準拠・ノーエラー・安全完了）'}</div>
+        <div style="font-size:0.78rem;color:#475569;margin-top:4px;">
+          ${isSpecial ? '想定外事象に対し、エスカレーションゲートにて客観的判断根拠を確定の上、上長とのペア作業で安全に完遂しました。' : '全サブステップの事前確認およびログ検証をクリアし、手順書通り安全にリリースを完了しました。'}
+        </div>
+      </div>
+      <span class="material-symbols-outlined" style="font-size:48px;color:${isSpecial ? '#7c3aed' : '#16a34a'};">
+        ${isSpecial ? 'verified_user' : 'workspace_premium'}
+      </span>
+    </div>
+
+    <div>
+      <h4 style="margin:0.8rem 0 0.4rem;color:#1e3a8a;display:flex;align-items:center;gap:0.4rem;">
+        <span class="material-symbols-outlined" style="font-size:18px;">schedule</span> 作業所要時間 & 体制
+      </h4>
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:0.6rem;background:#f8fafc;padding:0.8rem;border-radius:6px;border:1px solid #e2e8f0;font-size:0.8rem;">
+        <div><strong>作業開始:</strong> <span style="color:#64748b;">${sTime}</span></div>
+        <div><strong>作業完了:</strong> <span style="color:#64748b;">${eTime}</span></div>
+        <div><strong>所要時間:</strong> <span style="color:#2563eb;font-weight:700;">約 ${duration} 分</span></div>
+        <div><strong>担当オペレーター:</strong> <span style="color:#64748b;">${appState.userId}</span></div>
+        <div><strong>運用モード:</strong> <span style="color:${isSpecial ? '#7c3aed' : '#059669'};font-weight:700;">${isSpecial ? '特別モード（2人体制）' : '通常モード（1名体制）'}</span></div>
+        <div><strong>上長（承認者）:</strong> <span style="color:#64748b;">${isSpecial ? (appState.supervisorName || '上長') : 'なし'}</span></div>
+      </div>
+    </div>
+
+    <div>
+      <h4 style="margin:0.8rem 0 0.4rem;color:#1e3a8a;display:flex;align-items:center;gap:0.4rem;">
+        <span class="material-symbols-outlined" style="font-size:18px;">compare_arrows</span> 作業前（Before）と作業後（After）の結果比較
+      </h4>
+      <table class="sop-table" style="font-size:0.78rem;">
+        <thead>
+          <tr>
+            <th>確認対象</th>
+            <th>作業前の状態 (Before)</th>
+            <th>作業後の状態 (After)</th>
+            <th style="width:110px;">要件合致判定</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>アプリバージョン</strong></td>
+            <td>v2.0.4 (旧現行環境)</td>
+            <td>v2.1.0 (パッケージ同期完了)</td>
+            <td><span class="badge-status badge-success">正常更新 ✓</span></td>
+          </tr>
+          <tr>
+            <td><strong>データベース (users)</strong></td>
+            <td>tenant_id: T100<br>status: PENDING, plan: STANDARD</td>
+            <td>tenant_id: T100<br><strong>status: ACTIVE, plan: ENTERPRISE</strong></td>
+            <td><span class="badge-status badge-success">依頼元要件100%合致 ✓</span></td>
+          </tr>
+          <tr>
+            <td><strong>サービス稼働状況</strong></td>
+            <td>HTTP 200 OK (停止前確認)</td>
+            <td>HTTP 200 OK (新バージョン再起動後)</td>
+            <td><span class="badge-status badge-success">健全性確認完了 ✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h4 style="margin:0.8rem 0 0.4rem;color:#1e3a8a;display:flex;align-items:center;gap:0.4rem;">
+        <span class="material-symbols-outlined" style="font-size:18px;">inventory_2</span> 格納成果物・エビデンス保全
+      </h4>
+      <ul style="margin:0;padding-left:1.2rem;line-height:1.7;color:#334155;font-size:0.8rem;">
+        <li><strong style="color:#16a34a;">[格納済 ✓]</strong> 現行アプリ完全バックアップ: <code>/backup/app_$(date +%Y%m%d).tar.gz</code></li>
+        <li><strong style="color:#16a34a;">[格納済 ✓]</strong> 環境設定ファイルバックアップ: <code>/backup/.env.bak</code></li>
+        <li><strong style="color:#16a34a;">[格納済 ✓]</strong> 適用データベース更新SQL: <code>${appState.sqlFileName || '/release/v2.1.0/db_update.sql'}</code></li>
+        <li><strong style="color:#16a34a;">[保全済 ✓]</strong> TeraTermターミナル実行ログ証跡: <code>teraterm_session.log</code></li>
+        ${appState.escalationRecord ? `<li><strong style="color:#7c3aed;">[記録済 ✓]</strong> エスカレーション協議・判断根拠（こんきょ）証跡: <code>承認者: ${appState.escalationRecord.supervisor || '山田部長'} / 根拠: ${appState.escalationRecord.grounds}</code></li>` : ''}
+      </ul>
+    </div>
+  `;
+
+  const reportCont = document.getElementById("report-container");
+  if (reportCont) reportCont.innerHTML = html;
+  const modalBody = document.getElementById("modal-report-body");
+  if (modalBody) modalBody.innerHTML = html;
+}
+
+function openReportModal() {
+  renderFinalReportView();
+  document.getElementById("modal-report").classList.add("show");
+}
+
+function closeReportModal() {
+  document.getElementById("modal-report").classList.remove("show");
+}
+
+function exportReportMarkdown() {
+  const sTime = appState.startTime || "2026-09-06 00:00:00";
+  const eTime = appState.endTime || new Date().toLocaleString('ja-JP');
+  const isSpecial = appState.mode === "SPECIAL_PAIR";
+
+  let md = `# Excel作業手順書 リリース作業最終評価・完了報告書\n\n`;
+  md += `- **作業日時**: ${sTime} 〜 ${eTime}\n`;
+  md += `- **担当オペレーター**: ${appState.userId}\n`;
+  md += `- **運用体制**: ${isSpecial ? `特別モード 2人体制（上長ペア: ${appState.supervisorName || '上長'}）` : '通常モード（1名体制）'}\n`;
+  md += `- **総合評価スコア**: **${isSpecial ? 'A ランク（特別対応2人体制による安全完遂）' : 'S ランク（手順書完全準拠・ノーエラー・安全完了）'}**\n\n`;
+
+  md += `## 1. 作業前後の状態比較 (Before vs After)\n\n`;
+  md += `| 確認項目 | 作業前 (Before) | 作業後 (After) | 要件合致判定 |\n`;
+  md += `| :--- | :--- | :--- | :---: |\n`;
+  md += `| アプリケーションバージョン | v2.0.4 (旧現行環境) | v2.1.0 (最新) | **正常更新 ✓** |\n`;
+  md += `| データベース (users) | tenant_id: T100, status: PENDING, plan: STANDARD | tenant_id: T100, status: ACTIVE, plan: ENTERPRISE | **依頼元要件100%合致 ✓** |\n`;
+  md += `| ヘルスチェック | HTTP 200 OK (停止前) | HTTP 200 OK (起動後) | **正常稼働 ✓** |\n\n`;
+
+  md += `## 2. 格納成果物・エビデンス保全チェック\n\n`;
+  md += `- [x] 事前バックアップ: \`/backup/app_YYYYMMDD.tar.gz\`\n`;
+  md += `- [x] 設定ファイルバックアップ: \`/backup/.env.bak\`\n`;
+  md += `- [x] 適用SQLスクリプト: \`${appState.sqlFileName || '/release/v2.1.0/db_update.sql'}\`\n`;
+  md += `- [x] TeraTerm実行ログ: \`teraterm_session.log\`\n`;
+  if (appState.escalationRecord) {
+    md += `- [x] エスカレーション協議・判断根拠: \`承認者: ${appState.escalationRecord.supervisor || '上長'} / 根拠: ${appState.escalationRecord.grounds}\`\n`;
+  }
+
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Release_Final_Report_${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  showToast("最終評価レポート(Markdown)を出力しました！");
+}
+
+// --- Render Flow & SOP Sheet ---
+function renderFlowChart() {
+  const flowList = document.getElementById("flow-list");
+  flowList.innerHTML = "";
+
+  const normalSteps = SOP_ITEMS.filter(s => !s.isRollback && !s.isEscalation);
+  const rollbackSteps = SOP_ITEMS.filter(s => s.isRollback);
+
+  normalSteps.forEach((step, idx) => {
+    const isCompleted = !!appState.sopResults[step.id] && appState.sopResults[step.id].verdict === "SUCCESS";
+    const isError = appState.errorStep === step.id;
+    const isActive = !isCompleted && !isError && appState.currentStep === step.id;
+    const access = canAccessStep(step.id);
+    const isLocked = !isCompleted && !access.allowed;
+
+    let nodeClass = "step-node";
+    let icon = `<span class="material-symbols-outlined" style="color:#94a3b8;">radio_button_unchecked</span>`;
+    
+    if (isCompleted) {
+      nodeClass += " completed";
+      icon = `<span class="material-symbols-outlined" style="color:#16a34a;">check_circle</span>`;
+    } else if (isError) {
+      nodeClass += " error-stop";
+      icon = `<span class="material-symbols-outlined" style="color:#dc2626;">warning</span>`;
+    } else if (isActive) {
+      nodeClass += " active";
+      icon = `<span class="material-symbols-outlined" style="color:#2563eb;">play_circle</span>`;
+    } else if (isLocked) {
+      nodeClass += " locked";
+      icon = `<span class="material-symbols-outlined" style="color:#94a3b8;">lock</span>`;
+    }
+
+    const node = document.createElement("div");
+    node.className = nodeClass;
+    if (isLocked) {
+      node.style.opacity = "0.55";
+      node.style.cursor = "not-allowed";
+      node.title = `直前のステップ ${access.uncompletedStep} が完了するまで実行できません（手順スキップ禁止）`;
+    }
+    node.onclick = () => {
+      const chk = canAccessStep(step.id);
+      if (!chk.allowed) {
+        showToast(`🚫 直前のステップ ${chk.uncompletedStep} が未完了です（手順スキップ不可）`);
+        alert(`【手順スキップ禁止】\n直前のステップ ${chk.uncompletedStep} のログ検証（合格）がまだ完了していません。\n作業手順書を飛ばして実行することは重大インシデント防止のため禁止されています。`);
+        return;
+      }
+      quickSend(`ステップ ${step.id} の手順を確認したいです`);
+    };
+    node.innerHTML = `
+      <div class="step-info">
+        <div class="step-header-line">
+          <span class="step-num-tag">${step.id}</span>
+          <span class="step-title-text">${step.title}</span>
+        </div>
+        <div class="step-cmd-preview">${step.cmd.substring(0, 45)}...</div>
+      </div>
+      <div class="step-status-icon">${icon}</div>
+    `;
+    flowList.appendChild(node);
+
+    if (idx < normalSteps.length - 1) {
+      const arrow = document.createElement("div");
+      arrow.className = "flow-arrow";
+      arrow.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;">arrow_downward</span>`;
+      flowList.appendChild(arrow);
+    }
+  });
+
+  // Escalation branch section
+  const escBranchDiv = document.createElement("div");
+  escBranchDiv.className = "flow-divider-branch";
+  escBranchDiv.style.borderTopColor = "#f59e0b";
+  escBranchDiv.innerHTML = `<span class="branch-label" style="color:#b45309;">⚡ 想定外・要件不一致時のエスカレーション分岐</span>`;
+  flowList.appendChild(escBranchDiv);
+
+  const escStep = SOP_ITEMS.find(s => s.id === "E-1");
+  if (escStep) {
+    const isEscActive = appState.escalationActive || appState.currentStep === "E-1";
+    const isEscResolved = !!appState.escalationRecord;
+    let nodeClass = "step-node";
+    let icon = `<span class="material-symbols-outlined" style="color:#b45309;">gavel</span>`;
+    if (isEscResolved) {
+      nodeClass += " completed";
+      icon = `<span class="material-symbols-outlined" style="color:#16a34a;">check_circle</span>`;
+    } else if (isEscActive) {
+      nodeClass += " error-stop";
+      icon = `<span class="material-symbols-outlined" style="color:#dc2626;">warning</span>`;
+    }
+    const node = document.createElement("div");
+    node.className = nodeClass;
+    node.style.borderStyle = "dashed";
+    node.onclick = () => openEscalationModal();
+    node.innerHTML = `
+      <div class="step-info">
+        <div class="step-header-line">
+          <span class="step-num-tag" style="background:#fef3c7;color:#92400e;">${escStep.id}</span>
+          <span class="step-title-text" style="color:#b45309;">${escStep.title}</span>
+        </div>
+        <div class="step-cmd-preview">${isEscResolved ? `判定: ${appState.escalationRecord.decision} (${appState.escalationRecord.work_type})` : 'クリックしてエスカレーションゲートを開く'}</div>
+      </div>
+      <div class="step-status-icon">${icon}</div>
+    `;
+    flowList.appendChild(node);
+  }
+
+  // Rollback branch section
+  const branchDiv = document.createElement("div");
+  branchDiv.className = "flow-divider-branch";
+  branchDiv.innerHTML = `<span class="branch-label">⚠ 異常発生時のロールバック分岐</span>`;
+  flowList.appendChild(branchDiv);
+
+  rollbackSteps.forEach((step, idx) => {
+    const isCompleted = !!appState.sopResults[step.id] && appState.sopResults[step.id].verdict === "SUCCESS";
+    const isActive = appState.currentStep === step.id;
+
+    let nodeClass = "step-node rollback";
+    let icon = `<span class="material-symbols-outlined" style="color:#f87171;">sync_problem</span>`;
+    if (isCompleted) {
+      nodeClass += " completed";
+      icon = `<span class="material-symbols-outlined" style="color:#16a34a;">check_circle</span>`;
+    } else if (isActive) {
+      nodeClass += " active";
+      icon = `<span class="material-symbols-outlined" style="color:#dc2626;">play_circle</span>`;
+    }
+
+    const node = document.createElement("div");
+    node.className = nodeClass;
+    node.onclick = () => quickSend(`ステップ ${step.id} を実行します`);
+    node.innerHTML = `
+      <div class="step-info">
+        <div class="step-header-line">
+          <span class="step-num-tag" style="background:#fee2e2;color:#991b1b;">${step.id}</span>
+          <span class="step-title-text">${step.title}</span>
+        </div>
+        <div class="step-cmd-preview">${step.cmd.substring(0, 45)}...</div>
+      </div>
+      <div class="step-status-icon">${icon}</div>
+    `;
+    flowList.appendChild(node);
+  });
+
+  // Update banner
+  const banner = document.getElementById("flow-banner");
+  const bannerText = document.getElementById("flow-banner-text");
+  if (appState.escalationActive) {
+    banner.className = "flow-banner error";
+    bannerText.textContent = `【要エスカレーション】想定外事象のため作業進行がロックされています。エスカレーションゲートから対応結果・根拠を入力してください。`;
+  } else if (appState.errorStep) {
+    banner.className = "flow-banner error";
+    bannerText.textContent = `【想定外事象】ステップ ${appState.errorStep} で停止中。原因調査またはロールバック(R-1)を検討してください。`;
+  } else {
+    banner.className = "flow-banner";
+    bannerText.textContent = `現在の作業位置: ステップ ${appState.currentStep}`;
+  }
+}
+
+function renderSopTable() {
+  const tbody = document.getElementById("sop-table-body");
+  tbody.innerHTML = "";
+  let completedCount = 0;
+
+  SOP_ITEMS.forEach(step => {
+    const res = appState.sopResults[step.id];
+    let statusBadge = `<span class="badge-status badge-pending">未着手</span>`;
+    let timeStr = "-";
+    if (res) {
+      if (res.verdict === "SUCCESS") {
+        statusBadge = `<span class="badge-status badge-success">合格 ✓</span>`;
+        completedCount++;
+      } else {
+        statusBadge = `<span class="badge-status badge-failed">不合格 ✕</span>`;
+      }
+      timeStr = res.timestamp || "-";
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${step.id}</strong></td>
+      <td>${step.title}</td>
+      <td><code style="font-size:0.75rem;background:#f1f5f9;padding:2px 4px;border-radius:3px;">${step.cmd.substring(0, 30)}...</code></td>
+      <td>${statusBadge}</td>
+      <td><small style="color:#64748b;">${timeStr.replace(/^[0-9]+-/, '')}</small></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const normalTotal = SOP_ITEMS.filter(s => !s.isRollback && !s.isEscalation).length;
+  const pct = Math.round((completedCount / normalTotal) * 100);
+  document.getElementById("sop-progress-label").textContent = `進捗: ${completedCount} / ${normalTotal} 完了 (${pct}%)`;
+}
+
+function exportSopMarkdown() {
+  let md = `# Excel作業手順書 実行結果報告書\n\n`;
+  md += `- **作業日時**: ${new Date().toLocaleString('ja-JP')}\n`;
+  md += `- **担当オペレーター**: ${appState.userId}\n`;
+  md += `- **運用体制**: ${appState.mode === 'SPECIAL_PAIR' ? `特別モード 2人体制（上長ペア: ${appState.supervisorName || '上長'}）` : '通常モード（1名体制）'}\n`;
+  md += `- **全体ステータス**: ${appState.errorStep ? `異常停止 (Step ${appState.errorStep})` : (appState.escalationActive ? 'エスカレーション対応中' : '正常進行中')}\n\n`;
+  md += `| 項番 | 作業内容 | 実行コマンド | 判定結果 | 実行日時 |\n`;
+  md += `| :--- | :--- | :--- | :---: | :---: |\n`;
+
+  SOP_ITEMS.forEach(s => {
+    const res = appState.sopResults[s.id];
+    const status = res ? (res.verdict === "SUCCESS" ? "合格 ✓" : "不合格 ✕") : "未実施";
+    const time = res ? (res.timestamp || "-") : "-";
+    md += `| ${s.id} | ${s.title} | \`${s.cmd}\` | **${status}** | ${time} |\n`;
+  });
+
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `SOP_Execution_Report_${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  showToast("手順書結果(Markdown)を出力しました！");
+}
+
+function copyRawLog() {
+  if (!appState.rawLog) {
+    showToast("コピーするログがありません");
+    return;
+  }
+  navigator.clipboard.writeText(appState.rawLog).then(() => {
+    showToast("ログ全体をクリップボードにコピーしました！");
+  });
+}
+
+// --- Command Extraction & Copy ---
+function extractPureCommand(str) {
+  let clean = (str || "").trim();
+  clean = clean.replace(/^```[a-z]*\s*/i, "").replace(/\s*```$/, "");
+  clean = clean.replace(/^`+|`+$/g, "");
+  clean = clean.replace(/^(?:実行コマンド|コマンド|Command|Run|Bash|Shell)\s*[:：]\s*/i, "");
+  const commentIdx = clean.indexOf(" #");
+  if (commentIdx !== -1) {
+    clean = clean.substring(0, commentIdx).trim();
+  }
+  return clean.trim();
+}
+
+function copyOnlyCommand(cmdStr, btnElem) {
+  const pureCommand = extractPureCommand(cmdStr);
+  
+  if (appState.mode === "SPECIAL_PAIR") {
+    const confirmed = confirm(`【特別モード: 2人体制ダブルチェック】\n上長（${appState.supervisorName || "上長"}）と以下のコマンドを相互確認しましたか？\n\n投入コマンド:\n${pureCommand}`);
+    if (!confirmed) {
+      showToast("⚠ ダブルチェックが未確認のためコピーを中止しました");
+      return;
+    }
+  }
+
+  navigator.clipboard.writeText(pureCommand).then(() => {
+    if (btnElem) {
+      const origText = btnElem.innerHTML;
+      btnElem.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">check</span> コピー完了！`;
+      btnElem.classList.add("copied");
+      setTimeout(() => {
+        btnElem.innerHTML = origText;
+        btnElem.classList.remove("copied");
+      }, 2000);
+    }
+    showToast(`コマンドのみコピーしました: ${pureCommand}`);
+  }).catch(() => {
+    prompt("以下のコマンドをコピーしてください:", pureCommand);
+  });
+}
+
+// --- Chat & A2UI Renderer ---
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function bubble(who) {
+  const m = el("div", "msg " + who);
+  const b = el("div", "bubble");
+  m.appendChild(b);
+  log.appendChild(m);
+  log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+function boundStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v.literalString === "string") return v.literalString;
+  return "";
+}
+
+function childIds(props) {
+  const ids = [];
+  if (props && typeof props.child === "string") ids.push(props.child);
+  const ch = props && props.children;
+  if (ch && Array.isArray(ch.explicitList)) {
+    for (const c of ch.explicitList) if (typeof c === "string") ids.push(c);
+  }
+  return ids;
+}
+
+function buildNode(id, comps, seen) {
+  if (!id || seen.has(id)) return null;
+  seen.add(id);
+  const spec = comps[id];
+  if (!spec || typeof spec !== "object") return null;
+  const type = Object.keys(spec)[0];
+  const props = spec[type] || {};
+  const kids = () => childIds(props).map(cid => buildNode(cid, comps, seen)).filter(Boolean);
+
+  switch (type) {
+    case "Card": {
+      const cardWrapper = el("div", "a2card");
+      const header = el("div", "a2card-header");
+      const headerTitle = el("div");
+      headerTitle.style.display = "flex";
+      headerTitle.style.alignItems = "center";
+      headerTitle.style.gap = "0.4rem";
+      headerTitle.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;color:#2563eb;">description</span><span>作業手順カード</span>`;
+      header.appendChild(headerTitle);
+      cardWrapper.appendChild(header);
+
+      const body = el("div", "a2card-body");
+      kids().forEach(n => body.appendChild(n));
+      cardWrapper.appendChild(body);
+
+      const foundCmd = body.querySelector('.cmd-code');
+      if (foundCmd) {
+        const topCopyBtn = el("button", "copy-btn");
+        topCopyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> コマンドをコピー`;
+        topCopyBtn.onclick = (e) => {
+          e.stopPropagation();
+          copyOnlyCommand(foundCmd.dataset.rawCommand || foundCmd.textContent, topCopyBtn);
+        };
+        header.appendChild(topCopyBtn);
+      }
+      return cardWrapper;
+    }
+    case "Column":
+    case "List": {
+      const horizontal = type === "List" && props.direction === "horizontal";
+      const d = el("div", horizontal ? "a2row" : "a2col");
+      kids().forEach(n => d.appendChild(n));
+      return d;
+    }
+    case "Row": {
+      const d = el("div", "a2row" + (props.distribution === "spaceBetween" ? " between" : ""));
+      kids().forEach(n => d.appendChild(n));
+      return d;
+    }
+    case "Text": {
+      const rawText = boundStr(props.text);
+      const hint = String(props.usageHint || "body").toLowerCase();
+
+      // Command Box rendering
+      const pureCmd = extractPureCommand(rawText);
+      const isCommand = (hint === "h2") || /^(df |tar |systemctl |curl |rsync |cp |mv |ls |mysql )/i.test(pureCmd);
+      if (isCommand) {
+        const cmdBlock = el("div", "cmd-block");
+        const cmdHeader = el("div", "cmd-header");
+        
+        const cmdLabel = el("div", "cmd-label");
+        cmdLabel.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;color:#38bdf8;">terminal</span> 実行コマンド（クリックでコピー）`;
+
+        const copyBtn = el("button", "copy-btn");
+        copyBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> コピー`;
+        copyBtn.onclick = (e) => {
+          e.stopPropagation();
+          copyOnlyCommand(pureCmd, copyBtn);
+        };
+
+        cmdHeader.appendChild(cmdLabel);
+        cmdHeader.appendChild(copyBtn);
+        cmdBlock.appendChild(cmdHeader);
+
+        const cmdCode = el("div", "cmd-code", pureCmd);
+        cmdCode.dataset.rawCommand = pureCmd;
+        cmdCode.title = "クリックしてコマンドのみをコピー";
+        cmdCode.onclick = () => copyOnlyCommand(pureCmd, copyBtn);
+        cmdBlock.appendChild(cmdCode);
+
+        // In Special Mode: show Two-Person verification indicator
+        if (appState.mode === "SPECIAL_PAIR") {
+          const pairBox = el("div", "pair-check-box");
+          pairBox.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px;color:#9333ea;">verified</span><span>【特別モード】上長（${appState.supervisorName || "上長"}）と相互確認後に投入</span>`;
+          cmdBlock.appendChild(pairBox);
+        }
+
+        return cmdBlock;
+      }
+
+      const t = el("div", "a2text");
+      if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(hint)) {
+        t.classList.add("a2-" + hint);
+      } else if (hint === "caption") {
+        t.classList.add("a2-caption");
+      }
+      t.textContent = rawText;
+      return t;
+    }
+    case "Divider":
+      return el("hr", "a2divider");
+    default:
+      return null;
+  }
+}
+
+function renderSurface(messages, container) {
+  const comps = {};
+  const roots = [];
+  for (const m of messages) {
+    if (m.beginRendering && typeof m.beginRendering.root === "string") roots.push(m.beginRendering.root);
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) {
+      for (const c of su.components) if (c && c.id && c.component) comps[c.id] = c.component;
+    }
+  }
+  let rootIds = roots.filter(r => comps[r]);
+  if (rootIds.length === 0) {
+    const referenced = new Set();
+    for (const id in comps) {
+      const spec = comps[id];
+      childIds(spec[Object.keys(spec)[0]] || {}).forEach(c => referenced.add(c));
+    }
+    rootIds = Object.keys(comps).filter(id => !referenced.has(id));
+  }
+  let drew = false;
+  for (const rid of rootIds) {
+    const node = buildNode(rid, comps, new Set());
+    if (node) {
+      container.appendChild(node);
+      drew = true;
+    }
+  }
+  return drew;
+}
+
+function detectStepTransitions(text, parts) {
+  const now = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  
+  // Escalation detection
+  if (text.includes("エスカレーション") || text.includes("E-1") || text.includes("重大警告") || text.includes("要件不一致") || text.includes("想定外")) {
+    appState.escalationActive = true;
+    appState.escalationReason = text.substring(0, 140);
+    appState.currentStep = "E-1";
+    appState.errorStep = appState.currentStep;
+  } else if (text.includes("【判定: 合格】") || text.includes("合格") || text.includes("確認しました")) {
+    appState.sopResults[appState.currentStep] = {
+      verdict: "SUCCESS",
+      timestamp: now,
+      logSnippet: text.substring(0, 100)
+    };
+    appState.errorStep = null;
+    appState.escalationActive = false;
+  } else if (text.includes("【判定: 不合格】") || text.includes("エラー") || text.includes("異常停止") || text.includes("枯渇")) {
+    appState.sopResults[appState.currentStep] = {
+      verdict: "FAILED",
+      timestamp: now,
+      logSnippet: text.substring(0, 100)
+    };
+    appState.errorStep = appState.currentStep;
+    appState.escalationActive = true;
+    appState.escalationReason = text.substring(0, 140);
+  }
+
+  // Detect which step was presented next
+  const stepMatch = text.match(/ステップ\s*([0-9]-[0-9]|R-[0-9]|E-[0-9]|[0-9])/i);
+  if (stepMatch) {
+    let nextStep = stepMatch[1];
+    if (nextStep.length === 1 && !nextStep.includes("-")) nextStep += "-1";
+    const access = canAccessStep(nextStep);
+    if (access.allowed || nextStep.startsWith("R-") || nextStep.startsWith("E-")) {
+      appState.currentStep = nextStep;
+    }
+  }
+
+  updateModeUI();
+  renderFlowChart();
+  renderSopTable();
+  saveState();
+}
+
+function renderReply(b, parts, saveHistory = true) {
+  b.textContent = "";
+  const texts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
+  const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
+
+  const textStr = texts.join("\n").trim();
+  if (textStr) {
+    b.appendChild(el("div", null, textStr));
+  }
+
+  if (a2ui.length) {
+    b.classList.add("rich");
+    renderSurface(a2ui, b);
+  }
+  if (!b.childNodes.length) b.textContent = "(応答がありません)";
+  log.scrollTop = log.scrollHeight;
+
+  if (saveHistory) {
+    appState.chatHistory.push({ role: "agent", parts: parts });
+    detectStepTransitions(textStr, parts);
+    saveState();
+  }
+}
+
+async function sendMessage(text) {
+  if (!text) return;
+  
+  if (!appState.startTime) {
+    appState.startTime = new Date().toLocaleString('ja-JP');
+  }
+
+  bubble("user").textContent = text;
+  appState.chatHistory.push({ role: "user", text: text });
+  saveState();
+
+  input.value = "";
+  input.style.height = "44px";
+  const b = bubble("agent");
+  b.innerHTML = `<span style="color:#64748b;">HITMANが手順とログを検証中…</span>`;
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, user_id: appState.userId })
+    });
+    const data = await res.json();
+    renderReply(b, data.parts || []);
+  } catch (e) {
+    b.textContent = "通信エラーが発生しました: " + e.message;
+  }
+}
+
+function quickSend(txt) {
+  if (appState.escalationActive && !txt.includes("エスカレーション") && !txt.includes("ロールバック")) {
+    openEscalationModal();
+    return;
+  }
+
+  // Strict step sequence enforcement (skip prohibition)
+  const stepMatch = txt.match(/ステップ\s*([0-9]-[0-9]|R-[0-9]|E-[0-9]|[0-9])/i);
+  if (stepMatch) {
+    let target = stepMatch[1];
+    if (target.length === 1 && !target.includes("-")) target += "-1";
+    const access = canAccessStep(target);
+    if (!access.allowed) {
+      showToast(`🚫 直前のステップ ${access.uncompletedStep} が未完了です（手順スキップ不可）`);
+      alert(`【手順スキップ禁止】\n直前のステップ ${access.uncompletedStep} のログ検証（合格）がまだ完了していません。\n作業手順書の順序を遵守して作業を進めてください。`);
+      return;
+    }
+  }
+
+  input.value = txt;
+  form.dispatchEvent(new Event("submit"));
+}
+
+function quickPasteLog() {
+  input.placeholder = "ターミナルやTeraTermの実行ログを貼り付けてください（Ctrl+V）…";
+  input.focus();
+}
+
+function autoResizeTextarea() {
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 180) + "px";
+}
+
+input.addEventListener("input", autoResizeTextarea);
+
+// --- File Reader & Drag-Drop (.log, .txt, .sql) ---
+function readFileWithEncoding(file, encoding) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file, encoding);
+  });
+}
+
+async function processUploadedFile(file) {
+  if (!file) return;
+  try {
+    let content = await readFileWithEncoding(file, "utf-8");
+    if (content.includes("\ufffd")) {
+      content = await readFileWithEncoding(file, "shift-jis");
+    }
+
+    const isSql = file.name.toLowerCase().endsWith(".sql");
+
+    if (isSql) {
+      appState.sqlContent = content;
+      appState.sqlFileName = file.name;
+      document.getElementById("sql-viewer").textContent = content;
+      document.getElementById("sql-stat-label").textContent = `SQLファイル: ${file.name} (${content.split('\n').length}行)`;
+      switchTab('logs');
+      switchLogSubTab('sql');
+      showToast(`📎 更新SQL「${file.name}」を読み込みました`);
+    } else {
+      input.value = content;
+      autoResizeTextarea();
+      appState.rawLog = content;
+      document.getElementById("raw-log-viewer").textContent = content;
+      document.getElementById("log-stat-label").textContent = `ログファイル: ${file.name} (${content.split('\n').length}行)`;
+      switchTab('logs');
+      switchLogSubTab('log');
+      showToast(`📎 ログ「${file.name}」を読み込みました (${content.split('\n').length}行)`);
+      input.focus();
+    }
+    saveState();
+  } catch (err) {
+    showToast("ファイル読み込みエラー: " + err.message);
+  }
+}
+
+async function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  await processUploadedFile(file);
+  e.target.value = "";
+}
+
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    processUploadedFile(e.dataTransfer.files[0]);
+  }
+});
+
+// Auto-expand textarea & Enter to send
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    form.dispatchEvent(new Event("submit"));
+  }
+});
+
+form.addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  if (appState.escalationActive) {
+    openEscalationModal();
+    return;
+  }
+  const text = input.value.trim();
+  if (!text) return;
+  sendMessage(text);
+});
+
+// --- Initializer & Session Restore ---
+window.addEventListener("DOMContentLoaded", () => {
+  const hasSaved = loadState();
+
+  if (hasSaved && appState.chatHistory.length > 0) {
+    // Restore chat bubbles
+    appState.chatHistory.forEach(item => {
+      if (item.role === "user") {
+        bubble("user").textContent = item.text;
+      } else if (item.role === "agent") {
+        const b = bubble("agent");
+        renderReply(b, item.parts || [], false);
+      }
+    });
+    if (appState.rawLog) {
+      document.getElementById("raw-log-viewer").textContent = appState.rawLog;
+      document.getElementById("log-stat-label").textContent = `直近ログ (${appState.rawLog.split('\n').length}行)`;
+    }
+    if (appState.sqlContent) {
+      document.getElementById("sql-viewer").textContent = appState.sqlContent;
+      document.getElementById("sql-stat-label").textContent = `SQL: ${appState.sqlFileName || "db_update.sql"} (${appState.sqlContent.split('\n').length}行)`;
+    }
+    showToast("✓ 前回の作業状態を復元しました（途中から再開可能です）");
+  } else {
+    // Default initial agent greeting
+    const b = bubble("agent");
+    b.innerHTML = `こんにちは！Excel手順書AIペアオペレーター「HITMAN」です。<br>
+業務手順の安全な遂行をサポートします。<br><br>
+左ペインに<strong>常時手順フロー</strong>、<strong>手順書・結果記録</strong>、<strong>ログ/SQLプレビュー</strong>、<strong>最終評価報告</strong>を統合しています。<br>
+「<strong>▶ ステップ1開始</strong>」を押して作業をスタートしてください。`;
+  }
+
+  updateModeUI();
+  renderFlowChart();
+  renderSopTable();
+  renderFinalReportView();
+});
+</script>
+</body>
+</html>

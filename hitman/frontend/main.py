@@ -1,0 +1,393 @@
+# Copyright (c) 2026 Shunpei Suzuki (suzuki.shunpei@altx.co.jp), AltX Inc.
+# Developed by Shunpei Suzuki <suzuki.shunpei@altx.co.jp>
+#
+"""FastAPI proxy for the HITMAN Agent Frontend.
+
+Supports:
+1. Local development mode (connecting to ADK Playground on http://127.0.0.1:8080)
+2. Cloud production mode (connecting over A2A protocol when AGENT_ENGINE_RESOURCE_NAME is set)
+"""
+
+import json
+import os
+import re
+import uuid
+from dotenv import load_dotenv
+import httpx
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+load_dotenv()
+
+# Cloud deployment resource configuration
+RESOURCE = os.environ.get("AGENT_ENGINE_RESOURCE_NAME")
+LOCAL_AGENT_URL = os.environ.get("LOCAL_AGENT_URL", "http://127.0.0.1:8080")
+AGENT_DIRECTORY = os.environ.get("AGENT_DIRECTORY", "app")
+
+app = FastAPI(title="HITMAN Ops Assistant Frontend")
+
+# Local session store: user_id -> session_id
+_local_sessions: dict[str, str] = {}
+# Cloud A2A context store: user_id -> context_id
+_cloud_contexts: dict[str, str] = {}
+
+_A2UI_MIME = "application/json+a2ui"
+_TAG_RE = re.compile(r"<a2ui-json>([\s\S]*?)</a2ui-json>", re.IGNORECASE)
+
+
+@app.exception_handler(Exception)
+async def _json_errors(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=200,
+        content={
+            "parts": [{"kind": "text", "text": f"Error: {type(exc).__name__}: {exc}"}]
+        },
+    )
+
+
+def _parse_local_event_text(text: str) -> list[dict]:
+    """Parse text from local agent, extracting prose and <a2ui-json> blocks."""
+    parts: list[dict] = []
+    a2ui_match = _TAG_RE.search(text)
+    if a2ui_match:
+        a2ui_str = a2ui_match.group(1).strip()
+        prose = _TAG_RE.sub("", text).strip()
+        if prose:
+            parts.append({"kind": "text", "text": prose})
+        try:
+            a2ui_messages = json.loads(a2ui_str)
+            if isinstance(a2ui_messages, list):
+                for msg in a2ui_messages:
+                    parts.append({"kind": "a2ui", "data": msg})
+            elif isinstance(a2ui_messages, dict):
+                parts.append({"kind": "a2ui", "data": a2ui_messages})
+        except Exception:
+            parts.append({"kind": "text", "text": a2ui_str})
+    else:
+        if text.strip():
+            parts.append({"kind": "text", "text": text.strip()})
+    return parts
+
+
+async def _chat_local(user_id: str, message: str) -> list[dict]:
+    """Communicate with local ADK Web server on port 8080."""
+    parts: list[dict] = []
+    async with httpx.AsyncClient(timeout=120) as client:
+        session_id = _local_sessions.get(user_id)
+        if not session_id:
+            res_sess = await client.post(
+                f"{LOCAL_AGENT_URL}/apps/{AGENT_DIRECTORY}/users/{user_id}/sessions"
+            )
+            if res_sess.status_code == 200:
+                session_id = res_sess.json().get("id")
+                _local_sessions[user_id] = session_id
+            else:
+                session_id = str(uuid.uuid4())
+                _local_sessions[user_id] = session_id
+
+        payload = {
+            "app_name": AGENT_DIRECTORY,
+            "user_id": user_id,
+            "session_id": session_id,
+            "new_message": {
+                "role": "user",
+                "parts": [{"text": message}],
+            },
+            "streaming": False,
+        }
+        res_run = await client.post(f"{LOCAL_AGENT_URL}/run", json=payload)
+        res_run.raise_for_status()
+        events = res_run.json()
+
+        for event in events:
+            if event.get("author") in ("hitman", "model", "bot", "assistant"):
+                content = event.get("content") or {}
+                content_parts = content.get("parts") or []
+                for p in content_parts:
+                    txt = p.get("text")
+                    if txt:
+                        parts.extend(_parse_local_event_text(txt))
+
+    return parts
+
+
+async def _chat_cloud(user_id: str, message: str) -> list[dict]:
+    """Communicate with deployed Agent Runtime via A2A protocol."""
+    import google.auth
+    import google.auth.transport.requests
+    from a2a.client import ClientConfig, ClientFactory
+    from a2a.types import (
+        AgentCard,
+        FilePart,
+        Message,
+        Part,
+        Role,
+        TaskArtifactUpdateEvent,
+        TextPart,
+        TransportProtocol,
+    )
+
+    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    creds.refresh(google.auth.transport.requests.Request())
+    headers = {
+        "Authorization": f"Bearer {creds.token}",
+        "Content-Type": "application/json",
+    }
+
+    location = RESOURCE.split("/locations/")[1].split("/")[0]
+    a2a_base = (
+        f"https://{location}-aiplatform.googleapis.com/reasoningEngines/v1/"
+        f"{RESOURCE}/api/a2a/{AGENT_DIRECTORY}"
+    )
+    a2a_card_url = f"{a2a_base}/.well-known/agent-card.json"
+
+    parts: list[dict] = []
+    async with httpx.AsyncClient(headers=headers, timeout=120) as client:
+        resp = await client.get(a2a_card_url)
+        resp.raise_for_status()
+        card = AgentCard(**resp.json())
+        card.url = a2a_base
+
+        factory = ClientFactory(
+            ClientConfig(
+                supported_transports=[
+                    TransportProtocol.jsonrpc,
+                    TransportProtocol.http_json,
+                ],
+                httpx_client=client,
+            )
+        )
+        a2a_client = factory.create(card)
+
+        msg = Message(
+            message_id=str(uuid.uuid4()),
+            role=Role.user,
+            parts=[Part(root=TextPart(text=message))],
+            context_id=_cloud_contexts.get(user_id),
+        )
+
+        last_task = None
+        got_artifact_update = False
+        async for event in a2a_client.send_message(msg):
+            if not isinstance(event, tuple):
+                continue
+            task, update = event
+            if task is not None:
+                last_task = task
+                if getattr(task, "context_id", None):
+                    _cloud_contexts[user_id] = task.context_id
+            if isinstance(update, TaskArtifactUpdateEvent):
+                got_artifact_update = True
+                for p in update.artifact.parts:
+                    root = getattr(p, "root", p)
+                    if isinstance(root, TextPart) and getattr(root, "text", None):
+                        parts.append({"kind": "text", "text": root.text})
+                    elif getattr(root, "data", None) is not None:
+                        parts.append({"kind": "a2ui", "data": root.data})
+
+        if not got_artifact_update and last_task is not None:
+            for artifact in getattr(last_task, "artifacts", None) or []:
+                for p in artifact.parts:
+                    root = getattr(p, "root", p)
+                    if isinstance(root, TextPart) and getattr(root, "text", None):
+                        parts.append({"kind": "text", "text": root.text})
+                    elif getattr(root, "data", None) is not None:
+                        parts.append({"kind": "a2ui", "data": root.data})
+
+    return parts
+
+
+_direct_runner = None
+_direct_session_service = None
+
+
+def _get_direct_runner():
+    global _direct_runner, _direct_session_service
+    if _direct_runner is None:
+        import sys
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if root_dir not in sys.path:
+            sys.path.insert(0, root_dir)
+        from google.adk.runners import Runner
+        from google.adk.sessions import InMemorySessionService
+        from app.agent import root_agent
+
+        _direct_session_service = InMemorySessionService()
+        _direct_runner = Runner(
+            agent=root_agent,
+            session_service=_direct_session_service,
+            app_name="hitman",
+        )
+    return _direct_runner, _direct_session_service
+
+
+async def _chat_direct(user_id: str, message: str) -> list[dict]:
+    """Execute ADK agent directly in-process when local HTTP server is not running."""
+    import asyncio
+    from google.genai import types
+
+    runner, session_service = _get_direct_runner()
+    session_id = _local_sessions.get(user_id)
+    sess = None
+    if session_id:
+        try:
+            sess = session_service.get_session_sync(session_id=session_id)
+        except Exception:
+            sess = None
+
+    if not sess:
+        sess = session_service.create_session_sync(user_id=user_id, app_name="hitman")
+        session_id = sess.id
+        _local_sessions[user_id] = session_id
+
+    content = types.Content(
+        role="user",
+        parts=[types.Part.from_text(text=message)],
+    )
+
+    def _sync_run():
+        return list(
+            runner.run(
+                new_message=content,
+                user_id=user_id,
+                session_id=session_id,
+            )
+        )
+
+    events = await asyncio.to_thread(_sync_run)
+    parts: list[dict] = []
+    for event in events:
+        if getattr(event, "author", None) in ("hitman", "model", "bot", "assistant"):
+            c = getattr(event, "content", None)
+            if c:
+                for p in getattr(c, "parts", []):
+                    txt = getattr(p, "text", None)
+                    if txt:
+                        parts.extend(_parse_local_event_text(txt))
+    return parts
+
+
+@app.post("/chat")
+async def chat(req: Request):
+    body = await req.json()
+    message = body.get("message", "").strip()
+    user_id = body.get("user_id") or "web-user"
+
+    if not message:
+        return JSONResponse({"parts": []})
+
+    if RESOURCE:
+        parts = await _chat_cloud(user_id, message)
+    elif os.environ.get("USE_LOCAL_AGENT_SERVER", "false").lower() == "true":
+        try:
+            parts = await _chat_local(user_id, message)
+        except Exception:
+            parts = await _chat_direct(user_id, message)
+    else:
+        parts = await _chat_direct(user_id, message)
+
+    if not parts:
+        parts = [{"kind": "text", "text": "(応答がありませんでした。もう一度お試しください。)"}]
+
+    return JSONResponse({"parts": parts})
+
+
+@app.get("/api/sop")
+async def get_sop():
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import SOP_DATABASE
+    return JSONResponse(content=SOP_DATABASE)
+
+
+@app.post("/api/sql/analyze")
+async def api_analyze_sql(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import analyze_sql_impact
+
+    body = await req.json()
+    step_number = body.get("step_number", "3-3")
+    pre_select_log = body.get("pre_select_log", "")
+    sql_content = body.get("sql_content", "")
+    sop_requirement = body.get(
+        "sop_requirement",
+        "テナントT100のstatusをACTIVE、planをENTERPRISEに更新し、他テナントに影響を与えないこと",
+    )
+
+    res = analyze_sql_impact(step_number, pre_select_log, sql_content, sop_requirement)
+    return JSONResponse(content=res)
+
+
+@app.post("/api/escalation/gate")
+async def api_escalation_gate(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import evaluate_escalation_gate
+
+    body = await req.json()
+    escalation_result = body.get("escalation_result", "")
+    decision = body.get("decision", "")
+    grounds = body.get("grounds", "")
+    is_standard = body.get("is_standard_procedure", True)
+    supervisor_name = body.get("supervisor_name", "")
+
+    res = evaluate_escalation_gate(
+        escalation_result=escalation_result,
+        decision=decision,
+        grounds=grounds,
+        is_standard_procedure=is_standard,
+        supervisor_name=supervisor_name,
+    )
+    return JSONResponse(content=res)
+
+
+@app.post("/api/report/generate")
+async def api_report_generate(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import generate_final_report
+
+    body = await req.json()
+    start_time = body.get("start_time", "")
+    end_time = body.get("end_time", "")
+    duration_minutes = body.get("duration_minutes", 15)
+    mode = body.get("mode", "NORMAL")
+    supervisor_name = body.get("supervisor_name", "")
+    sop_results = body.get("sop_results", {})
+    escalation_record = body.get("escalation_record")
+
+    report = generate_final_report(
+        start_time=start_time,
+        end_time=end_time,
+        duration_minutes=duration_minutes,
+        mode=mode,
+        supervisor_name=supervisor_name,
+        sop_results=sop_results,
+        escalation_record=escalation_record,
+    )
+    return JSONResponse(content=report)
+
+
+
+# Static UI mount
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.environ.get("PORT", 3000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

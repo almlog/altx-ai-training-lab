@@ -197,3 +197,13 @@ Then follow the [lab guide](https://cszhu.github.io/build-with-gemini/) to desig
 ## 📄 License
 
 This is not an officially supported Google product and is provided for the Build with Gemini workshop for demonstration purposes only.
+
+---
+
+## 👨‍💻 Author & Copyright
+
+- **Lead Developer**: Shunpei Suzuki (`suzuki.shunpei@altx.co.jp`)
+- **Organization**: AltX Inc. (株式会社AltX)
+- **Project**: HITMAN - SOP Navigation & AI Pair Operator Cockpit
+- **Copyright**: Copyright (c) 2026 Shunpei Suzuki. All rights reserved.
+

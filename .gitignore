@@ -1,6 +1,17 @@
 # Authoring notes, not participant-facing
 context.md
 
+# Environments & Secrets
+.env
+.env.*
+!.env.example
+*.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log
+
 # macOS noise
 .DS_Store
 
