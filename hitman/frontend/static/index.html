@@ -884,6 +884,10 @@
       <span class="material-symbols-outlined" style="font-size:15px;" id="mode-badge-icon">check_circle</span>
       <span id="mode-badge-text">通常モード（1名体制）</span>
     </div>
+    <button class="btn-report-hdr" style="border-color:#3b82f6;color:#93c5fd;" onclick="openImportModal()" title="自社や既存のExcel/CSV/Markdown手順書を取り込んでAIペア作業を開始">
+      <span class="material-symbols-outlined" style="font-size:16px;">upload_file</span>
+      <span>手順書インポート</span>
+    </button>
     <button class="btn-report-hdr" onclick="openReportModal()" title="作業前後の結果比較・所要時間・成果物評価レポートを表示">
       <span class="material-symbols-outlined" style="font-size:16px;">assessment</span>
       <span>最終評価レポート</span>
@@ -1028,6 +1032,7 @@
     </div>
 
     <div class="quick-bar">
+      <button class="chip" style="background:#1e3a8a;color:#fff;font-weight:600;" onclick="openImportModal()">📤 手順書インポート</button>
       <button class="chip" onclick="quickSend('手順書のステップ1を開始したいです')">▶ ステップ1開始</button>
       <button class="chip" onclick="quickSend('ステップ 3-3 のDB更新事前確認を実行したいです')">▶ 3-3 DB事前確認/SQL評価</button>
       <button class="chip" onclick="quickPasteLog()">📋 ログ貼り付け判定</button>
@@ -1148,6 +1153,66 @@
   </div>
 </div>
 
+<!-- Modal 3: SOP Import Modal -->
+<div id="modal-import-sop" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:740px;">
+    <div class="modal-header">
+      <h3>
+        <span class="material-symbols-outlined" style="color:#38bdf8;">upload_file</span>
+        <span>既存手順書のインポート (SOP Importer)</span>
+      </h3>
+      <button class="modal-close-btn" onclick="closeImportModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.8rem;font-size:0.82rem;color:#1e40af;line-height:1.6;">
+        <div style="display:flex;align-items:center;gap:0.4rem;font-weight:700;margin-bottom:0.2rem;">
+          <span class="material-symbols-outlined" style="font-size:18px;">verified_user</span>
+          <span>AI有識者 (Wチェック確認者) の自律化</span>
+        </div>
+        既存のExcel手順書（表セルコピー）、Markdown表、TSV/CSV、またはJSONテキストをインポートすると、
+        コマンド・期待結果ログ・事前確認を自律抽出し、HITMANが確認者（有識者）として自律判定・安全分岐（ロールバック/エスカレーション）を担います。
+      </div>
+
+      <div class="esc-form-group" style="margin-top:0.85rem;">
+        <label>① プリセット手順書の選択（ワンクリック読込）</label>
+        <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+          <button type="button" class="chip" style="background:#f1f5f9;color:#0f172a;" onclick="loadSopPreset('web_release')">🌐 Webアプリリリース (標準)</button>
+          <button type="button" class="chip" style="background:#f1f5f9;color:#0f172a;" onclick="loadSopPreset('pg_maintenance')">🐘 PostgreSQL保守・REINDEX</button>
+          <button type="button" class="chip" style="background:#f1f5f9;color:#0f172a;" onclick="loadSopPreset('batch_recovery')">⚡ バッチキュー障害復旧・RQ</button>
+          <button type="button" class="chip" style="color:#dc2626;" onclick="clearImportTextarea()">🗑 クリア</button>
+        </div>
+      </div>
+
+      <div class="esc-form-group" style="margin-top:0.85rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <label>② 手順書テキスト貼り付け または ファイル読込 <span class="req-star">*必須</span></label>
+          <label class="chip" style="cursor:pointer;margin:0;font-size:0.75rem;">
+            📁 ファイルから読込 (.md / .tsv / .csv / .json / .txt)
+            <input type="file" id="sop-file-input" accept=".md,.tsv,.csv,.json,.txt" style="display:none;" onchange="handleSopFileSelect(event)">
+          </label>
+        </div>
+        <textarea id="sop-import-textarea" class="esc-textarea" rows="9" style="font-family:monospace;font-size:0.78rem;line-height:1.4;" placeholder="| 項番 | 作業内容 | 投入コマンド | 期待ログ・判定基準 | 注意事項 |&#10;| 1 | DBヘルスチェック | pg_isready -h localhost -p 5432 | accepting connections | 接続不可時は即時連絡 |&#10;| 2 | インデックス再構築 | REINDEX TABLE CONCURRENTLY users; | REINDEX | ピーク時厳禁 |&#10;&#10;※ Excelの手順書表セルをコピー＆ペースト（TSV）しても自動認識されます。"></textarea>
+      </div>
+
+      <div class="esc-form-group" style="margin-top:0.6rem;">
+        <label>③ 入力フォーマット形式</label>
+        <select id="sop-format-select" class="esc-input" style="cursor:pointer;">
+          <option value="auto">自動判別 (Auto Detect - Markdown / TSV / CSV / JSON)</option>
+          <option value="markdown">Markdown 表形式 (| 項番 | 作業内容 | コマンド | 期待結果 | ... |)</option>
+          <option value="tsv">TSV (Excel表セルを直接コピー＆ペースト)</option>
+          <option value="csv">CSV (カンマ区切りテキスト)</option>
+          <option value="json">JSON 構造化データ</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="chip" onclick="resetToDefaultSopBackend()">🔄 標準手順書へリセット</button>
+      <button class="chip" onclick="closeImportModal()">キャンセル</button>
+      <button class="btn-report-hdr" style="background:#2563eb;color:#fff;border-color:#1d4ed8;" onclick="executeSopImport()">🚀 手順書を自律抽出してインポート実行</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast">
   <span class="material-symbols-outlined" style="color:#22c55e;">check_circle</span>
   <span id="toast-msg">コマンドをコピーしました！</span>
@@ -1175,8 +1240,8 @@ let appState = {
   escalationRecord: null
 };
 
-// SOP Definition with Steps, Escalation Gate, and Rollback Branch
-const SOP_ITEMS = [
+// SOP Definition with Steps, Escalation Gate, and Rollback Branch (動的に更新可能)
+let SOP_ITEMS = [
   { id: "1-1", parent: "1", title: "ディスク空き容量の事前確認", cmd: "df -h /backup", check: "Avail >= 10GB", isSub: true },
   { id: "1-2", parent: "1", title: "事前バックアップの取得（本作業）", cmd: "tar -czvf /backup/app_$(date +%Y%m%d).tar.gz /var/www/app", check: "エラーなくアーカイブ作成", isSub: true },
   { id: "2-1", parent: "2", title: "ロードバランサー切り離し確認", cmd: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/health", check: "アクセス遮断確認", isSub: true },
@@ -1195,9 +1260,103 @@ const SOP_ITEMS = [
 ];
 
 // 手順書の正規実行順序（手順スキップ絶対禁止）
-const STEP_SEQUENCE = [
+let STEP_SEQUENCE = [
   "1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2"
 ];
+
+function updateSopItemsFromDb(sopDb, seq) {
+  if (!sopDb) return;
+  const items = [];
+  
+  const keys = Object.keys(sopDb).sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    if (!isNaN(na)) return -1;
+    if (!isNaN(nb)) return 1;
+    return a.localeCompare(b);
+  });
+
+  for (const parentKey of keys) {
+    if (parentKey === "E" || parentKey === "R") continue;
+    const parentData = sopDb[parentKey];
+    const subSteps = parentData.sub_steps || {};
+    const subKeys = Object.keys(subSteps);
+    if (subKeys.length > 0) {
+      for (const subId of subKeys) {
+        const sub = subSteps[subId];
+        items.push({
+          id: subId,
+          parent: String(parentKey),
+          title: sub.title || `ステップ ${subId}`,
+          cmd: sub.command || "",
+          check: sub.expected_check || "正常終了",
+          isSub: true,
+          cautions: sub.cautions || ""
+        });
+      }
+    } else {
+      items.push({
+        id: String(parentKey),
+        parent: String(parentKey),
+        title: parentData.title || `ステップ ${parentKey}`,
+        cmd: parentData.command || "",
+        check: parentData.expected_check || "正常終了",
+        isSub: false,
+        cautions: parentData.cautions || ""
+      });
+    }
+  }
+
+  // Escalation Gate
+  if (sopDb["E"]) {
+    const escSub = sopDb["E"].sub_steps || {};
+    for (const escId of Object.keys(escSub)) {
+      items.push({
+        id: escId,
+        parent: "E",
+        title: escSub[escId].title || "【エスカレーション】協議・GO/NOGO判断ゲート",
+        cmd: escSub[escId].command || "# [エスカレーション・ゲート]",
+        check: escSub[escId].expected_check || "判断根拠・承認確認",
+        isEscalation: true
+      });
+    }
+  } else {
+    items.push({
+      id: "E-1",
+      parent: "E",
+      title: "【エスカレーション】協議・GO/NOGO判断ゲート",
+      cmd: "# [ゲート制御] 対応結果・GO/NOGO・判断根拠を入力",
+      check: "判断根拠・承認確認",
+      isEscalation: true
+    });
+  }
+
+  // Rollback Branch
+  if (sopDb["R"]) {
+    const rbSub = sopDb["R"].sub_steps || {};
+    for (const rbId of Object.keys(rbSub)) {
+      items.push({
+        id: rbId,
+        parent: "R",
+        title: rbSub[rbId].title || "【ロールバック】旧環境復元",
+        cmd: rbSub[rbId].command || "",
+        check: rbSub[rbId].expected_check || "復元完了",
+        isRollback: true
+      });
+    }
+  } else {
+    items.push(
+      { id: "R-1", parent: "R", title: "【ロールバック】旧バージョン復元", cmd: "tar -xzvf /backup/app_*.tar.gz -C / && cp -p /backup/.env.bak /var/www/app/.env", check: "旧ファイル復元完了", isRollback: true },
+      { id: "R-2", parent: "R", title: "【ロールバック】サービス再起動と健全性確認", cmd: "systemctl restart my-app.service && curl -I http://localhost:8080/health", check: "HTTP 200 OK 復帰", isRollback: true }
+    );
+  }
+
+  SOP_ITEMS = items;
+  if (seq && Array.isArray(seq) && seq.length > 0) {
+    STEP_SEQUENCE = seq;
+  }
+}
 
 function canAccessStep(targetStepId) {
   if (!targetStepId) return { allowed: true };
@@ -1237,6 +1396,183 @@ function resetSessionConfirm() {
   if (confirm("作業履歴と手順書記録をリセットして、新規セッションを開始しますか？")) {
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
+  }
+}
+
+// --- SOP Importer Modal & Presets ---
+const SOP_PRESETS = {
+  web_release: `# 標準Webアプリケーション リリース手順書 (AltX Inc.)
+| 項番 | 作業項目・目的 | 投入コマンド | 期待ログ・合否基準 | 注意事項 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1-1 | ディスク空き容量の事前確認 | df -h /backup | Avail >= 10GB | 空き容量10GB未満は中断 |
+| 1-2 | 事前バックアップの取得（本作業） | tar -czvf /backup/app_$(date +%Y%m%d).tar.gz /var/www/app | エラーなくアーカイブ作成 | バックアップ完了まで停止禁止 |
+| 2-1 | ロードバランサー切り離し確認 | curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/health | アクセス遮断確認 | 外部トラフィック流入停止 |
+| 2-2 | Webサービスの停止（本作業） | systemctl stop my-app.service | Active: inactive (dead) | 確実に停止したことを確認 |
+| 3-1 | 環境設定ファイル（.env）退避 | cp -p /var/www/app/.env /backup/.env.bak | .env.bak 作成確認 | パーミッション維持 |
+| 3-2 | 新バージョンの配置（本作業） | rsync -avz --exclude='.env' /release/v2.1.0/ /var/www/app/ | ファイル同期完了 | .env上書き除外を確認 |
+| 3-3 | DB更新の事前確認（事前SELECT） | mysql -u app_user -p app_db -e "SELECT id, tenant_id, status, plan, updated_at FROM users WHERE tenant_id = 'T100';" | 要件合致（MATCH）確認 | 対象テナントT100限定を確認 |
+| 3-4 | DB更新SQLの適用（本作業） | mysql -u app_user -p app_db < /release/v2.1.0/db_update.sql | affected rows 整合確認 | 複数行更新時は即時停止 |
+| 4-1 | 新バージョンサービスの起動 | systemctl start my-app.service | Active: active (running) | 起動失敗時はjournalctl確認 |
+| 4-2 | 正常性確認（リリース完了判定） | curl -I http://localhost:8080/health | HTTP/1.1 200 OK | リリース完了 |`,
+
+  pg_maintenance: `# PostgreSQL 定期保守・REINDEX＆統計更新手順書
+| 項番 | 作業項目・目的 | 投入コマンド | 期待ログ・合否基準 | 注意事項 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1-1 | DB接続と健全性確認 | pg_isready -h localhost -p 5432 | accepting connections | 接続不可時はDBAへ即時連絡 |
+| 1-2 | アクティブセッション確認 | psql -U postgres -d app_db -c "SELECT count(*) FROM pg_stat_activity WHERE state = 'active';" | count | 実行中トランザクションの終了待機 |
+| 2-1 | メンテナンスモード切替 | touch /var/www/app/storage/framework/down | 作成完了 | ユーザーアクセス遮断 |
+| 2-2 | インデックス再構築（CONCURRENTLY） | psql -U postgres -d app_db -c "REINDEX TABLE CONCURRENTLY users;" | REINDEX | ロック競合なきこと確認 |
+| 3-1 | テーブル統計情報再収集 | psql -U postgres -d app_db -c "ANALYZE VERBOSE users;" | ANALYZE | 実行プラン最適化 |
+| 4-1 | メンテナンスモード解除 | rm -f /var/www/app/storage/framework/down | 削除完了 | 通常アクセス再開 |
+| 4-2 | 最終ヘルスチェック | curl -I http://localhost:8080/health | HTTP/1.1 200 OK | 保守完了確認 |`,
+
+  batch_recovery: `# Redis＆RQバッチジョブ 障害復旧・再キューイング手順書
+| 項番 | 作業項目・目的 | 投入コマンド | 期待ログ・合否基準 | 注意事項 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1-1 | Redisメモリ・接続健全性確認 | redis-cli info memory | used_memory_human | メモリ枯渇なきこと確認 |
+| 1-2 | 滞留ジョブキュー確認 | rq info --url redis://localhost:6379/0 | failed | 失敗ジョブ件数と原因記録 |
+| 2-1 | ワーカープロセス一時停止 | supervisorctl stop all:worker_* | STOPPED | 新規ジョブ処理停止 |
+| 2-2 | 失敗ジョブの退避・再キューイング | rq requeue --all --url redis://localhost:6379/0 | requeued | 再試行投入 |
+| 3-1 | ワーカープロセス再起動 | supervisorctl start all:worker_* | RUNNING | 正常稼働復旧 |
+| 3-2 | ジョブ正常消化確認 | rq info --url redis://localhost:6379/0 | 0 failed | 滞留解消の確認 |`
+};
+
+function openImportModal() {
+  const modal = document.getElementById("modal-import-sop");
+  if (modal) modal.classList.add("show");
+}
+
+function closeImportModal() {
+  const modal = document.getElementById("modal-import-sop");
+  if (modal) modal.classList.remove("show");
+}
+
+function loadSopPreset(key) {
+  const txtArea = document.getElementById("sop-import-textarea");
+  const selectFmt = document.getElementById("sop-format-select");
+  if (SOP_PRESETS[key]) {
+    txtArea.value = SOP_PRESETS[key];
+    if (selectFmt) selectFmt.value = "markdown";
+    showToast(`📋 プリセット「${key}」を読み込みました`);
+  }
+}
+
+function clearImportTextarea() {
+  const txtArea = document.getElementById("sop-import-textarea");
+  if (txtArea) txtArea.value = "";
+}
+
+async function handleSopFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    let content = await readFileWithEncoding(file, "utf-8");
+    if (content.includes("\ufffd")) {
+      content = await readFileWithEncoding(file, "shift-jis");
+    }
+    const txtArea = document.getElementById("sop-import-textarea");
+    const selectFmt = document.getElementById("sop-format-select");
+    txtArea.value = content;
+
+    const lowerName = file.name.toLowerCase();
+    if (lowerName.endsWith(".tsv") || lowerName.endsWith(".csv")) {
+      selectFmt.value = lowerName.endsWith(".tsv") ? "tsv" : "csv";
+    } else if (lowerName.endsWith(".json")) {
+      selectFmt.value = "json";
+    } else if (lowerName.endsWith(".md")) {
+      selectFmt.value = "markdown";
+    } else {
+      selectFmt.value = "auto";
+    }
+    showToast(`📁 手順書ファイル「${file.name}」を読み込みました`);
+  } catch (err) {
+    alert("手順書ファイル読み込みエラー: " + err.message);
+  }
+  e.target.value = "";
+}
+
+async function executeSopImport() {
+  const txtArea = document.getElementById("sop-import-textarea");
+  const selectFmt = document.getElementById("sop-format-select");
+  const content = (txtArea ? txtArea.value : "").trim();
+  const format = selectFmt ? selectFmt.value : "auto";
+
+  if (!content) {
+    alert("手順書データが入力されていません。テキストを貼り付けるか、プリセットを選択してください。");
+    return;
+  }
+
+  showToast("⚙️ 手順書を解析・自律抽出中…");
+
+  try {
+    const res = await fetch("/api/sop/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content, format_type: format })
+    });
+    const data = await res.json();
+
+    if (data.result && data.result.status === "error") {
+      alert("手順書解析エラー: " + data.result.message);
+      return;
+    }
+
+    // Update frontend state with newly imported SOP
+    updateSopItemsFromDb(data.sop, data.sequence);
+
+    // Reset runtime progress for new SOP
+    appState.sopResults = {};
+    appState.currentStep = (data.sequence && data.sequence.length > 0) ? data.sequence[0] : "1-1";
+    appState.errorStep = null;
+    appState.escalationActive = false;
+    appState.escalationReason = "";
+    appState.escalationRecord = null;
+    appState.startTime = new Date().toLocaleString('ja-JP');
+
+    closeImportModal();
+    updateModeUI();
+    renderFlowChart();
+    renderSopTable();
+    saveState();
+
+    const count = (data.result && data.result.imported_steps_count) || (data.sequence ? data.sequence.length : 0);
+    showToast(`✓ 新しい手順書（${count} ステップ）を正常にインポートしました！`);
+
+    // Notify agent in chat
+    sendMessage(`【手順書インポート完了】既存の手順書から ${count} 件のステップを自律抽出・登録しました。これより作業者とAI確認者（有識者Wチェック）の自律体制で作業を開始します。最初のステップ（${appState.currentStep}）の手順を提示してください。`);
+
+  } catch (err) {
+    alert("手順書インポートAPI通信エラー: " + err.message);
+  }
+}
+
+async function resetToDefaultSopBackend() {
+  if (!confirm("標準Webアプリケーション リリース手順書へ初期化（リセット）しますか？")) return;
+  try {
+    const res = await fetch("/api/sop/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const data = await res.json();
+    updateSopItemsFromDb(data.sop, data.sequence);
+
+    appState.sopResults = {};
+    appState.currentStep = "1-1";
+    appState.errorStep = null;
+    appState.escalationActive = false;
+    appState.escalationReason = "";
+    appState.escalationRecord = null;
+
+    closeImportModal();
+    updateModeUI();
+    renderFlowChart();
+    renderSopTable();
+    saveState();
+
+    showToast("✓ 標準リリース手順書へリセットしました");
+    sendMessage("標準のWebアプリケーション リリース手順書へリセットしました。ステップ 1-1 から作業を再開してください。");
+  } catch (err) {
+    alert("手順書リセットAPI通信エラー: " + err.message);
   }
 }
 
@@ -1918,6 +2254,23 @@ function buildNode(id, comps, seen) {
       header.appendChild(headerTitle);
       cardWrapper.appendChild(header);
 
+      // AI Pair Operator & Verifier status ribbon
+      const ribbon = el("div");
+      ribbon.style.background = "#f1f5f9";
+      ribbon.style.borderBottom = "1px solid #e2e8f0";
+      ribbon.style.padding = "0.3rem 0.8rem";
+      ribbon.style.display = "flex";
+      ribbon.style.alignItems = "center";
+      ribbon.style.justifyContent = "space-between";
+      ribbon.style.fontSize = "0.74rem";
+      ribbon.style.color = "#475569";
+      ribbon.innerHTML = `
+        <span style="display:flex;align-items:center;gap:0.3rem;"><span class="material-symbols-outlined" style="font-size:14px;color:#2563eb;">person</span><strong>作業者</strong>: コマンド投入</span>
+        <span class="material-symbols-outlined" style="font-size:13px;color:#94a3b8;">arrow_forward</span>
+        <span style="display:flex;align-items:center;gap:0.3rem;"><span class="material-symbols-outlined" style="font-size:14px;color:#16a34a;">verified_user</span><strong>AI有識者 (Wチェック)</strong>: 自律検証＆承認</span>
+      `;
+      cardWrapper.appendChild(ribbon);
+
       const body = el("div", "a2card-body");
       kids().forEach(n => body.appendChild(n));
       cardWrapper.appendChild(body);
@@ -2036,13 +2389,19 @@ function renderSurface(messages, container) {
 function detectStepTransitions(text, parts) {
   const now = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
   
-  // Escalation detection
-  if (text.includes("エスカレーション") || text.includes("E-1") || text.includes("重大警告") || text.includes("要件不一致") || text.includes("想定外")) {
+  // Autonomous W-Check and branching detection
+  if (text.includes("BRANCH_ROLLBACK") || text.includes("ロールバック必須") || text.includes("【ロールバック】")) {
+    appState.currentStep = "R-1";
+    appState.errorStep = appState.currentStep;
     appState.escalationActive = true;
     appState.escalationReason = text.substring(0, 140);
+    appState.sopResults[appState.currentStep] = { verdict: "FAILED", timestamp: now, logSnippet: text.substring(0, 100) };
+  } else if (text.includes("BRANCH_ESCALATION") || text.includes("エスカレーション必須") || text.includes("エスカレーション") || text.includes("E-1")) {
     appState.currentStep = "E-1";
     appState.errorStep = appState.currentStep;
-  } else if (text.includes("【判定: 合格】") || text.includes("合格") || text.includes("確認しました")) {
+    appState.escalationActive = true;
+    appState.escalationReason = text.substring(0, 140);
+  } else if (text.includes("VERIFIED_APPROVED") || text.includes("Wチェック承認") || text.includes("【判定: 合格】")) {
     appState.sopResults[appState.currentStep] = {
       verdict: "SUCCESS",
       timestamp: now,
@@ -2050,15 +2409,13 @@ function detectStepTransitions(text, parts) {
     };
     appState.errorStep = null;
     appState.escalationActive = false;
-  } else if (text.includes("【判定: 不合格】") || text.includes("エラー") || text.includes("異常停止") || text.includes("枯渇")) {
+  } else if (text.includes("BLOCKED_RETRY") || text.includes("進行ブロック") || text.includes("【判定: 不合格】") || text.includes("エラー")) {
     appState.sopResults[appState.currentStep] = {
       verdict: "FAILED",
       timestamp: now,
       logSnippet: text.substring(0, 100)
     };
     appState.errorStep = appState.currentStep;
-    appState.escalationActive = true;
-    appState.escalationReason = text.substring(0, 140);
   }
 
   // Detect which step was presented next
@@ -2084,6 +2441,42 @@ function renderReply(b, parts, saveHistory = true) {
   const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
 
   const textStr = texts.join("\n").trim();
+
+  // Autonomous W-Check Verdict Banners
+  if (textStr.includes("Wチェック承認") || textStr.includes("VERIFIED_APPROVED")) {
+    const banner = el("div", "pair-check-box");
+    banner.style.background = "#f0fdf4";
+    banner.style.borderColor = "#86efac";
+    banner.style.color = "#15803d";
+    banner.style.marginBottom = "0.6rem";
+    banner.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;color:#16a34a;">verified</span><span><strong>【AI確認者 有識者Wチェック承認 ✓】</strong> 期待結果ログとの整合性を自律検証しました。次手順へ進行してください。</span>`;
+    b.appendChild(banner);
+  } else if (textStr.includes("ロールバック必須") || textStr.includes("BRANCH_ROLLBACK")) {
+    const banner = el("div", "pair-check-box");
+    banner.style.background = "#fef2f2";
+    banner.style.borderColor = "#fca5a5";
+    banner.style.color = "#991b1b";
+    banner.style.marginBottom = "0.6rem";
+    banner.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;color:#dc2626;">sync_problem</span><span><strong>【AI確認者 自律判定: ロールバック発動 🚨】</strong> 致命的エラーを検知。作業中断・旧バージョン復元手順（R-1）へ自律分岐します。</span>`;
+    b.appendChild(banner);
+  } else if (textStr.includes("エスカレーション必須") || textStr.includes("BRANCH_ESCALATION")) {
+    const banner = el("div", "pair-check-box");
+    banner.style.background = "#fffbeb";
+    banner.style.borderColor = "#fcd34d";
+    banner.style.color = "#92400e";
+    banner.style.marginBottom = "0.6rem";
+    banner.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;color:#d97706;">gavel</span><span><strong>【AI確認者 自律判定: エスカレーション発動 ⚡】</strong> 競合・不整合を検知。ゲート（E-1）へ自律分岐し、有識者協議を要求します。</span>`;
+    b.appendChild(banner);
+  } else if (textStr.includes("進行ブロック") || textStr.includes("BLOCKED_RETRY")) {
+    const banner = el("div", "pair-check-box");
+    banner.style.background = "#fef2f2";
+    banner.style.borderColor = "#fca5a5";
+    banner.style.color = "#b91c1c";
+    banner.style.marginBottom = "0.6rem";
+    banner.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;color:#ef4444;">block</span><span><strong>【AI確認者 自律判定: 再投入ブロック ✕】</strong> 期待結果不一致。原因調査の上、コマンドを再実行してください。</span>`;
+    b.appendChild(banner);
+  }
+
   if (textStr) {
     b.appendChild(el("div", null, textStr));
   }
@@ -2184,7 +2577,23 @@ async function processUploadedFile(file) {
       content = await readFileWithEncoding(file, "shift-jis");
     }
 
-    const isSql = file.name.toLowerCase().endsWith(".sql");
+    const lowerName = file.name.toLowerCase();
+    const isSql = lowerName.endsWith(".sql");
+    const isSop = lowerName.endsWith(".tsv") || lowerName.endsWith(".csv") || (lowerName.endsWith(".md") && content.includes("|"));
+
+    if (isSop) {
+      const want = confirm(`手順書ファイル「${file.name}」がドロップされました。\n手順書インポート画面を開いて取り込みますか？`);
+      if (want) {
+        openImportModal();
+        const txtArea = document.getElementById("sop-import-textarea");
+        const selectFmt = document.getElementById("sop-format-select");
+        if (txtArea) txtArea.value = content;
+        if (selectFmt) {
+          selectFmt.value = lowerName.endsWith(".tsv") ? "tsv" : (lowerName.endsWith(".csv") ? "csv" : "markdown");
+        }
+        return;
+      }
+    }
 
     if (isSql) {
       appState.sqlContent = content;
@@ -2249,6 +2658,18 @@ form.addEventListener("submit", (ev) => {
 window.addEventListener("DOMContentLoaded", () => {
   const hasSaved = loadState();
 
+  // Sync SOP from backend
+  fetch("/api/sop")
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.sop) {
+        updateSopItemsFromDb(data.sop, data.sequence);
+        renderFlowChart();
+        renderSopTable();
+      }
+    })
+    .catch(err => console.warn("Failed to sync SOP from backend:", err));
+
   if (hasSaved && appState.chatHistory.length > 0) {
     // Restore chat bubbles
     appState.chatHistory.forEach(item => {
@@ -2272,9 +2693,8 @@ window.addEventListener("DOMContentLoaded", () => {
     // Default initial agent greeting
     const b = bubble("agent");
     b.innerHTML = `こんにちは！Excel手順書AIペアオペレーター「HITMAN」です。<br>
-業務手順の安全な遂行をサポートします。<br><br>
-左ペインに<strong>常時手順フロー</strong>、<strong>手順書・結果記録</strong>、<strong>ログ/SQLプレビュー</strong>、<strong>最終評価報告</strong>を統合しています。<br>
-「<strong>▶ ステップ1開始</strong>」を押して作業をスタートしてください。`;
+既存の手順書をインポートして安全にコマンドを抽出し、<strong>作業者＆AI有識者（確認者）のWチェック体制</strong>で自律判断・分岐制御・エビデンス保全を行います。<br><br>
+上部の「<strong>📤 手順書インポート</strong>」から自社手順書（Excel表コピー/Markdown/CSV）を取り込むか、または「<strong>▶ ステップ1開始</strong>」で標準リリース手順を開始してください。`;
   }
 
   updateModeUI();

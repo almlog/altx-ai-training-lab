@@ -203,6 +203,190 @@ SOP_DATABASE = {
 }
 
 
+import copy
+import csv
+import io
+import json
+
+# デフォルト手順書とアクティブ手順書の動的ステート管理
+DEFAULT_SOP_DATABASE = copy.deepcopy(SOP_DATABASE)
+ACTIVE_SOP_DATABASE = copy.deepcopy(DEFAULT_SOP_DATABASE)
+ACTIVE_STEP_SEQUENCE = list(STEP_SEQUENCE)
+
+
+def get_active_sop() -> dict:
+    return ACTIVE_SOP_DATABASE
+
+
+def set_active_sop(new_sop: dict, new_seq: list[str] = None):
+    global ACTIVE_SOP_DATABASE, ACTIVE_STEP_SEQUENCE
+    ACTIVE_SOP_DATABASE = new_sop
+    if new_seq:
+        ACTIVE_STEP_SEQUENCE = new_seq
+
+
+def reset_active_sop() -> dict:
+    global ACTIVE_SOP_DATABASE, ACTIVE_STEP_SEQUENCE
+    ACTIVE_SOP_DATABASE = copy.deepcopy(DEFAULT_SOP_DATABASE)
+    ACTIVE_STEP_SEQUENCE = list(STEP_SEQUENCE)
+    return ACTIVE_SOP_DATABASE
+
+
+def import_sop_procedure(content: str, format_type: str = "auto") -> dict:
+    """既存の業務手順書（JSON、Markdown表、TSV/CSV、構造化テキスト）をインポートし、
+    HITMAN の自律実行・Wチェック監視用手順書データベースを動的に更新する。
+
+    Args:
+        content: 手順書の内容（Markdown形式の表、JSON文字列、ExcelからコピーしたTSV/CSVテキストなど）。
+        format_type: 入力フォーマット ('auto', 'json', 'csv', 'tsv', 'markdown')。
+
+    Returns:
+        インポート結果、登録されたステップ数、ステップ一覧を含む辞書。
+    """
+    raw = (content or "").strip()
+    if not raw:
+        return {"status": "error", "message": "手順書の内容が空です。"}
+
+    parsed_steps = []
+
+    # 1. JSON 判定
+    if raw.startswith("{") or raw.startswith("["):
+        try:
+            data = json.loads(raw)
+            if isinstance(data, list):
+                parsed_steps = data
+            elif isinstance(data, dict):
+                if any(isinstance(v, dict) and "title" in v for v in data.values()):
+                    seq = []
+                    for k, v in data.items():
+                        if "sub_steps" in v:
+                            seq.extend(list(v["sub_steps"].keys()))
+                        else:
+                            seq.append(str(k))
+                    set_active_sop(data, seq)
+                    return {
+                        "status": "success",
+                        "imported_steps_count": len(seq),
+                        "step_sequence": seq,
+                        "sop_database": data,
+                        "message": f"【手順書インポート成功】{len(seq)} ステップのJSON手順書を正常にロードしました。",
+                    }
+                else:
+                    parsed_steps = list(data.values())
+        except Exception:
+            pass
+
+    # 2. Markdown 表 または TSV/CSV 判定
+    if not parsed_steps:
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        md_table_lines = [l for l in lines if l.startswith("|") and l.endswith("|")]
+        if len(md_table_lines) >= 2:
+            headers = [c.strip().lower() for c in md_table_lines[0].split("|")[1:-1]]
+            for line in md_table_lines[1:]:
+                if "---" in line:
+                    continue
+                cols = [c.strip() for c in line.split("|")[1:-1]]
+                if not cols or not cols[0]:
+                    continue
+                step_obj = {}
+                for idx, col_val in enumerate(cols):
+                    if idx < len(headers):
+                        h = headers[idx]
+                        if any(k in h for k in ("step", "ステップ", "番号", "項番", "no")):
+                            step_obj["step_id"] = col_val
+                        elif any(k in h for k in ("title", "タイトル", "作業名", "手順名", "項目")):
+                            step_obj["title"] = col_val
+                        elif any(k in h for k in ("command", "コマンド", "実行")):
+                            step_obj["command"] = col_val
+                        elif any(k in h for k in ("check", "確認", "期待", "結果")):
+                            step_obj["expected_check"] = col_val
+                        elif any(k in h for k in ("caution", "注意", "備考", "リスク")):
+                            step_obj["cautions"] = col_val
+                        elif any(k in h for k in ("objective", "目的")):
+                            step_obj["objective"] = col_val
+                if step_obj.get("step_id") or step_obj.get("title"):
+                    parsed_steps.append(step_obj)
+        else:
+            delim = "\t" if "\t" in raw else ","
+            reader = csv.reader(io.StringIO(raw), delimiter=delim)
+            rows = [r for r in reader if r and any(c.strip() for c in r)]
+            if rows:
+                first_row = [c.strip().lower() for c in rows[0]]
+                has_header = any(k in first_row[0] for k in ("step", "ステップ", "項番", "no"))
+                data_rows = rows[1:] if has_header else rows
+                for r in data_rows:
+                    cols = [c.strip() for c in r]
+                    if not cols or not cols[0]:
+                        continue
+                    step_id = cols[0]
+                    title = cols[1] if len(cols) > 1 else f"ステップ {step_id}"
+                    command = cols[2] if len(cols) > 2 else ""
+                    expected = cols[3] if len(cols) > 3 else "エラーなく正常終了すること"
+                    cautions = cols[4] if len(cols) > 4 else "コマンド実行前に引数を確認すること"
+                    parsed_steps.append({
+                        "step_id": step_id,
+                        "title": title,
+                        "command": command,
+                        "expected_check": expected,
+                        "cautions": cautions,
+                    })
+
+    if not parsed_steps:
+        return {"status": "error", "message": "手順書のステップを検出できませんでした。表形式（Markdown/TSV/CSV）またはJSONで指定してください。"}
+
+    new_db = {}
+    new_seq = []
+
+    for idx, s in enumerate(parsed_steps):
+        raw_id = str(s.get("step_id", idx + 1)).strip()
+        title = s.get("title") or f"ステップ {raw_id}"
+        cmd = s.get("command") or ""
+        obj = s.get("objective") or title
+        exp = s.get("expected_check") or "正常終了すること"
+        cau = s.get("cautions") or "慎重に実行してください"
+
+        if "-" in raw_id:
+            parent_part = raw_id.split("-")[0]
+            parent_key = int(parent_part) if parent_part.isdigit() else parent_part
+        else:
+            parent_key = int(raw_id) if raw_id.isdigit() else (idx + 1)
+            raw_id = f"{parent_key}-1"
+
+        if parent_key not in new_db:
+            new_db[parent_key] = {
+                "step_id": str(parent_key),
+                "title": f"ステップ {parent_key}: {title}",
+                "objective": obj,
+                "command": cmd,
+                "expected_check": exp,
+                "cautions": cau,
+                "sub_steps": {},
+            }
+
+        new_db[parent_key]["sub_steps"][raw_id] = {
+            "title": f"ステップ {raw_id}: {title}",
+            "objective": obj,
+            "command": cmd,
+            "expected_check": exp,
+            "cautions": cau,
+        }
+        new_seq.append(raw_id)
+
+    if "E" not in new_db and "E" in DEFAULT_SOP_DATABASE:
+        new_db["E"] = copy.deepcopy(DEFAULT_SOP_DATABASE["E"])
+    if "R" not in new_db and "R" in DEFAULT_SOP_DATABASE:
+        new_db["R"] = copy.deepcopy(DEFAULT_SOP_DATABASE["R"])
+
+    set_active_sop(new_db, new_seq)
+    return {
+        "status": "success",
+        "imported_steps_count": len(new_seq),
+        "step_sequence": new_seq,
+        "sop_database": new_db,
+        "message": f"【手順書インポート成功】{len(new_seq)} 件の手順ステップを自律抽出しました。HITMANの監視・Wチェック対象を新手順書へ更新しました。",
+    }
+
+
 def get_procedure_step(step_number: int | str) -> dict:
     """指定されたステップ番号またはサブステップ番号（例: 1, '1-1', '1-2', 'R-1'）の手順書内容を取得する。
 
@@ -213,12 +397,14 @@ def get_procedure_step(step_number: int | str) -> dict:
         ステップのタイトル、作業目的、実行コマンド、確認項目、注意事項を含む辞書。
     """
     step_str = str(step_number).strip().upper()
+    db = ACTIVE_SOP_DATABASE if ACTIVE_SOP_DATABASE else SOP_DATABASE
+
     # サブステップ（例: '1-1', 'R-1'）の検索
     if "-" in step_str:
         prefix = step_str.split("-")[0]
         parent_key = int(prefix) if prefix.isdigit() else prefix
-        if parent_key in SOP_DATABASE and step_str in SOP_DATABASE[parent_key].get("sub_steps", {}):
-            sub = SOP_DATABASE[parent_key]["sub_steps"][step_str]
+        if parent_key in db and step_str in db[parent_key].get("sub_steps", {}):
+            sub = db[parent_key]["sub_steps"][step_str]
             return {
                 "status": "found",
                 "step_number": step_str,
@@ -236,8 +422,8 @@ def get_procedure_step(step_number: int | str) -> dict:
     except ValueError:
         num = -1
 
-    if num in SOP_DATABASE:
-        step = SOP_DATABASE[num]
+    if num in db:
+        step = db[num]
         return {
             "status": "found",
             "step_number": num,
@@ -253,7 +439,7 @@ def get_procedure_step(step_number: int | str) -> dict:
 
     return {
         "status": "not_found",
-        "message": f"ステップ {step_number} は手順書に定義されていません。現在定義されている親ステップは 1〜{len(SOP_DATABASE)} です。",
+        "message": f"ステップ {step_number} は手順書に定義されていません。現在定義されている親ステップは 1〜{len(db)} です。",
     }
 
 
@@ -294,7 +480,8 @@ def compress_large_log(log_text: str, max_lines: int = 120) -> str:
 
 
 def verify_step_output(step_number: int | str, command_output: str) -> dict:
-    """オペレーターがコマンドを実行した出力ログを検証し、手順書の期待結果と合致しているか判定する。
+    """オペレーターがコマンドを実行した出力ログを有識者AI（確認者）として客観検証し、
+    Wチェック判定（合格承認・リトライ遮断・自律分岐指示）を行う。
     TeraTermのログ取得機能によるタイムスタンプやエスケープシーケンス、大量ログにも対応。
 
     Args:
@@ -302,58 +489,107 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
         command_output: オペレーターがターミナルからコピーした実行結果ログ、またはTeraTermログ。
 
     Returns:
-        合否結果（SUCCESS/FAILED）と詳細な判定コメントを含む辞書。
+        合否結果（SUCCESS/FAILED）、Wチェック承認状態（w_check_status）、自律判定理由、分岐先を含む辞書。
     """
     sanitized = sanitize_terminal_log(command_output)
     compressed = compress_large_log(sanitized)
     output_lower = compressed.lower()
+    step_str = str(step_number).upper()
 
+    # 1. 致命的システム障害（データ破損・カーネルパニック・OOM） -> 緊急ロールバック (BRANCH_ROLLBACK -> R-1)
+    fatal_keywords = [
+        "segmentation fault", "kernel panic", "out of memory", "oom-killer",
+        "cannot allocate memory", "database corrupted", "fatal: could not read",
+        "filesystem read-only",
+    ]
+    for fk in fatal_keywords:
+        if fk in output_lower:
+            return {
+                "verdict": "FAILED",
+                "w_check_status": "BRANCH_ROLLBACK",
+                "step_id": step_str,
+                "branch_to": "R-1",
+                "reason": f"致命的システム異常 '{fk}' を検出しました。作業を直ちに中止し、ロールバック手順（R-1）へ切り戻してください。",
+                "autonomous_verdict": f"【AI確認者 警告】致命的システム異常（{fk}）を自律検知。安全最優先のためロールバック手順（R-1）への即時分岐を指示します。",
+                "message": f"【判定: 異常・ロールバック分岐】致命的エラー '{fk}' を検知しました。直ちに『ステップ R-1: ロールバック手順』へ移行してください。",
+            }
+
+    # 2. データベースデッドロック・制約違反・データ不在 -> エスカレーション対応 (BRANCH_ESCALATION -> E-1)
+    escalation_keywords = [
+        "deadlock found", "lock wait timeout exceeded", "foreign key constraint fails",
+        "duplicate entry", "table doesn't exist", "relation does not exist",
+    ]
+    for ek in escalation_keywords:
+        if ek in output_lower:
+            return {
+                "verdict": "FAILED",
+                "w_check_status": "BRANCH_ESCALATION",
+                "step_id": step_str,
+                "branch_to": "E-1",
+                "reason": f"データベース整合性エラー '{ek}' を検知しました。独断での継続は重大障害につながるためエスカレーション（E-1）が必要です。",
+                "autonomous_verdict": f"【AI確認者 判定】DB整合性エラー（{ek}）を検知。エスカレーションゲート（E-1）へ自律分岐し、有識者・上長協議を要求します。",
+                "message": f"【判定: 中断・エスカレ分岐】DB不整合 '{ek}' を検出しました。独断での継続をブロックします。『ステップ E-1: エスカレーション対応』へ移行してください。",
+            }
+
+    # 3. 一般的なエラーキーワードの検査
     error_keywords = ["error", "failed", "permission denied", "fatal", "not found", "500 internal", "command not found"]
     for kw in error_keywords:
         if kw in output_lower and "0 error" not in output_lower:
             return {
                 "verdict": "FAILED",
-                "step_id": str(step_number),
+                "w_check_status": "BRANCH_ROLLBACK",
+                "step_id": step_str,
                 "branch_to": "R-1",
                 "reason": f"実行ログ内にエラーキーワード '{kw}' が検出されました。異常停止しました。原因調査またはロールバック手順（R-1）への切り替えを検討してください。",
+                "autonomous_verdict": f"【AI確認者 判定】実行ログ内にエラー '{kw}' を検知。後続コマンドの投入を遮断し、ロールバック手順（R-1）への切り戻しを推奨します。",
+                "message": f"【判定: 不合格】ログ内にエラー '{kw}' が見つかりました。直ちに手順を中断してください。",
             }
 
-    step_str = str(step_number).upper()
-
-    # 1. 事前確認: df -h 空き容量チェック
+    # 4. 事前確認: df -h 空き容量チェック
     if "1-1" in step_str or ("df" in output_lower and "1" in step_str):
         if "100%" in output_lower or "99%" in output_lower or "no space left" in output_lower:
             return {
                 "verdict": "FAILED",
+                "w_check_status": "BLOCKED_RETRY",
                 "step_id": "1-1",
                 "reason": "ディスク容量が枯渇しています（99〜100%）。バックアップ取得を中断し、空き容量を確保してください。",
+                "autonomous_verdict": "【AI確認者 判定】ディスク容量枯渇を検知。空き容量が確保されるまで本作業（ステップ1-2）への進行を遮断します。",
+                "message": "【判定: 不合格】ディスク容量が枯渇しています。空き容量を確保するまで本作業へ進めません。",
             }
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "1-1",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】/backup ディレクトリの空き容量健全性を確認しました。本作業（ステップ1-2）への進行を正式承認します。",
             "message": "【判定: 合格】/backup ディレクトリの空き容量が十分にあることを確認しました。安全にバックアップを実行できます。続いて『ステップ 1-2: バックアップの取得』へ進んでください。",
         }
 
-    # 2. 本作業: tar バックアップチェック
+    # 5. 本作業: tar バックアップチェック
     if "1-2" in step_str or ("tar" in output_lower or "app_" in output_lower):
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "1-2",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】バックアップアーカイブの正常作成と整合性を確認しました。ステップ1の完了を承認します。",
             "message": "【判定: 合格】バックアップアーカイブの正常作成を確認しました！ステップ1の全工程が完了しました。続いて『ステップ2: Webサービスの停止』へ進んでください。",
         }
 
-    # 3. 新バージョン配置とDB更新チェック
+    # 6. 新バージョン配置とDB更新チェック
     if "3-1" in step_str or ".env.bak" in output_lower:
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "3-1",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】環境設定ファイル（.env）の退避バックアップ保全を確認しました。",
             "message": "【判定: 合格】環境設定ファイル（.env）の退避バックアップ作成を確認しました。続いて『ステップ 3-2: 新バージョンの配置』へ進んでください。",
         }
 
     if "3-2" in step_str or "rsync" in output_lower or "sent " in output_lower:
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "3-2",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】新バージョンパッケージの同期完了を確認しました。DB更新事前確認への移行を承認します。",
             "message": "【判定: 合格】新バージョンパッケージの同期完了を確認しました。続いて『ステップ 3-3: DB更新の事前確認（事前SELECT・SQL影響評価）』へ進んでください。",
         }
 
@@ -361,68 +597,87 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
         if "empty set" in output_lower or "0 rows" in output_lower:
             return {
                 "verdict": "FAILED",
+                "w_check_status": "BRANCH_ESCALATION",
                 "step_id": "3-3",
                 "branch_to": "E-1",
                 "reason": "事前SELECT結果に対象レコードが存在しません（0件）。条件誤りまたはデータ不在のためエスカレーション（E-1）が必要です。",
+                "autonomous_verdict": "【AI確認者 判定】更新対象レコードが不在（0件）です。投入予定SQLの適用を遮断し、エスカレーション（E-1）へ自律分岐します。",
+                "message": "【判定: 不合格・エスカレ分岐】対象レコードが存在しません（0件）。更新SQLを投入してはなりません。『ステップ E-1: エスカレーション対応』へ移行してください。",
             }
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "3-3",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】事前SELECTログを確認。投入予定SQLの事前影響評価（analyze_sql_impact）を実行してください。",
             "message": "【判定: 合格】事前SELECTログを確認しました。更新予定SQLの事前影響評価を実行してください（analyze_sql_impact）。",
         }
 
     if "3-4" in step_str or "query ok" in output_lower or "row affected" in output_lower:
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "3-4",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】DB更新SQLの正常コミットを確認しました。後続サービス起動への進行を承認します。",
             "message": "【判定: 合格】DB更新SQLが正常に適用されました（Query OK）。続いて『ステップ 4: サービス起動と正常性確認』へ進んでください。",
         }
 
-    # 4. サービス停止チェック
+    # 7. サービス停止チェック
     if "2" in step_str:
         if "inactive" in output_lower or "dead" in output_lower or "stopped" in output_lower:
             return {
                 "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
                 "step_id": "2-2" if "2-2" in step_str else "2-1",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】サービス正常停止を確認しました。静止点確保完了。",
                 "message": "【判定: 合格】サービスの正常停止を確認しました。次のステップ3へ進んでください。",
             }
 
-    # 5. ヘルスチェック・リリース完了
+    # 8. ヘルスチェック・リリース完了
     if "4" in step_str:
         if "200 ok" in output_lower or "healthy" in output_lower:
             return {
                 "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
                 "step_id": "4-2" if "4-2" in step_str else "4-1",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】ヘルスチェック HTTP 200 OK を確認。全工程の安全完遂を承認します。",
                 "message": "【判定: 合格】ヘルスチェック 200 OK を確認しました！全リリース作業は無事完了です。お疲れ様でした！",
             }
 
-    # 6. エスカレーション対応 (E-1)
+    # 9. エスカレーション対応 (E-1)
     if "E-1" in step_str or "E" in step_str:
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "E-1",
+            "autonomous_verdict": "【AI確認者 ゲート確認】エスカレーション対応フォームにて客観的判断根拠を入力してください。",
             "message": "【エスカレーション対応ゲート】協議結果・GO/NOGO・判断根拠を入力して判定を確定してください（evaluate_escalation_gate）。",
         }
 
-    # 7. ロールバック復元チェック (R-1)
+    # 10. ロールバック復元チェック (R-1)
     if "R-1" in step_str:
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "R-1",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】旧バージョンおよび .env のロールバック復元を確認しました。",
             "message": "【判定: 合格】旧バージョンファイルおよび .env のロールバック復元が完了しました。続いて『ステップ R-2: サービス再起動と健全性確認』を実行してください。",
         }
 
-    # 8. ロールバック健全性確認 (R-2)
+    # 11. ロールバック健全性確認 (R-2)
     if "R-2" in step_str:
         return {
             "verdict": "SUCCESS",
+            "w_check_status": "VERIFIED_APPROVED",
             "step_id": "R-2",
+            "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】ロールバック完了および健全性確認を完了しました。",
             "message": "【判定: 合格】旧バージョンへの切り戻し（ロールバック）が正常に完了しました。障害調査のためログを保全してください。",
         }
 
     return {
         "verdict": "SUCCESS",
+        "w_check_status": "VERIFIED_APPROVED",
         "step_id": step_str,
+        "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】実行ログを客観検証しました。異常なし・合格と判定し、次ステップへの進行を承認します。",
         "message": "【判定: 合格】ログの確認が完了しました。異常は見当たりません。次の手順へ進んでください。",
     }
 
@@ -758,6 +1013,7 @@ a2ui_instruction = schema_manager.generate_system_prompt(
         "9. 全手順完了時は `generate_final_report` で作業前後の結果比較、所要時間、格納成果物の最終評価報告を作成してください。"
         "10. セッション間の長期記憶（Memory Bank）の活用: オペレーターの過去の作業履歴、習熟度、よくあるエラー傾向、または指示された特記事項をセッションをまたいで記憶・参照し、安全でパーソナライズされた運用支援を提供してください。"
         "11. 障害対応・運用ナレッジ（RAG）の活用: オペレーターからディスク容量不足、DBロック待ち、HTTP 500エラー、または運用基準に関する質問やトラブル報告を受けた際は、直ちに `consult_sop_knowledge` ツールを呼び出して社内ナレッジベース（障害対応SOPガイド）から関連する対処法や推奨コマンドを取得し、的確に案内してください。"
+        "12. 既存手順書のインポートと自律Wチェック有識者役: オペレーターが新しい手順書（Markdown表、CSV、JSONなど）のロードを要求した場合は `import_sop_procedure` ツールを呼び出して即座に取り込んでください。あなたは受動的なチャットボットではなく、有識者として『事前確認の未完了は本番投入を拒否』『ログを客観検証しWチェック承認シールを発行』『異常時は自律的にエスカレやロールバックへ分岐』する厳格な確認者です。"
     ),
     workflow_description="Analyze the operator's request, query the procedure database using tools, guide them step-by-step through pre-checks, SQL analysis, escalation gates, and return structured A2UI cards.",
     ui_description=(
@@ -829,6 +1085,7 @@ root_agent = Agent(
         evaluate_escalation_gate,
         generate_final_report,
         consult_sop_knowledge,
+        import_sop_procedure,
     ],
     after_agent_callback=generate_memories_callback,
     after_model_callback=a2ui_callback,

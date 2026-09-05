@@ -299,8 +299,47 @@ async def get_sop():
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
-    from app.agent import SOP_DATABASE
-    return JSONResponse(content=SOP_DATABASE)
+    from app.agent import ACTIVE_STEP_SEQUENCE, get_active_sop
+    return JSONResponse(content={
+        "sop": get_active_sop(),
+        "sequence": ACTIVE_STEP_SEQUENCE
+    })
+
+
+@app.post("/api/sop/import")
+async def api_sop_import(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import ACTIVE_STEP_SEQUENCE, get_active_sop, import_sop_procedure
+
+    body = await req.json()
+    content = body.get("content", "")
+    format_type = body.get("format_type", "auto")
+
+    res = import_sop_procedure(content=content, format_type=format_type)
+    return JSONResponse(content={
+        "result": res,
+        "sop": get_active_sop(),
+        "sequence": ACTIVE_STEP_SEQUENCE
+    })
+
+
+@app.post("/api/sop/reset")
+async def api_sop_reset(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import ACTIVE_STEP_SEQUENCE, get_active_sop, reset_active_sop
+
+    res = reset_active_sop()
+    return JSONResponse(content={
+        "result": res,
+        "sop": get_active_sop(),
+        "sequence": ACTIVE_STEP_SEQUENCE
+    })
 
 
 @app.post("/api/sql/analyze")
