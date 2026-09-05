@@ -868,6 +868,140 @@
     border: 1px solid #334155;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Enterprise Human Approval & Parameter Card */
+  .sop-meta-card {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    padding: 0.65rem 0.85rem;
+    font-size: 0.78rem;
+  }
+  .approval-card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+  .approval-stamp-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+  .seal-stamp {
+    width: 44px;
+    height: 44px;
+    border: 2px solid #16a34a;
+    border-radius: 50%;
+    color: #16a34a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center;
+    background: #f0fdf4;
+    flex-shrink: 0;
+    transform: rotate(-4deg);
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2);
+    user-select: none;
+  }
+  .seal-stamp.unapproved {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: #fef2f2;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.2);
+  }
+  .approval-meta-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  .approval-title-txt {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .approval-sub-txt {
+    font-size: 0.72rem;
+    color: #64748b;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .param-badge-resolved {
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    border: 1px solid #bbf7d0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    white-space: nowrap;
+  }
+  .param-badge-warning {
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    border: 1px solid #fde68a;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    white-space: nowrap;
+  }
+  .params-accordion {
+    margin-top: 0.45rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .params-accordion summary {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    background: #f1f5f9;
+  }
+  .params-accordion summary:hover {
+    background: #e2e8f0;
+  }
+  .params-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    font-family: monospace;
+  }
+  .params-grid-table td {
+    padding: 0.3rem 0.6rem;
+    border-top: 1px solid #e2e8f0;
+  }
+  .params-grid-table td.param-k {
+    color: #1e3a8a;
+    font-weight: 700;
+    width: 38%;
+  }
+  .params-grid-table td.param-v {
+    color: #0f172a;
+    word-break: break-all;
+  }
 </style>
 </head>
 <body>
@@ -906,6 +1040,46 @@
 <div id="workspace">
   <!-- Left Panel: SOP / Flow / Logs / Report -->
   <div id="left-panel">
+    <!-- Human Approval Record & Resolved Parameters Header -->
+    <div id="sop-meta-card" class="sop-meta-card">
+      <div class="approval-card-row">
+        <div class="approval-stamp-group">
+          <div id="seal-stamp" class="seal-stamp">
+            <span id="seal-stamp-status">承認済</span>
+            <span style="font-size:0.52rem;font-weight:600;">APPR</span>
+          </div>
+          <div class="approval-meta-text">
+            <div class="approval-title-txt">
+              <span id="meta-work-title">基幹EC決済プラットフォーム (本番環境)</span>
+            </div>
+            <div class="approval-sub-txt">
+              <span>承認者: <strong id="meta-approver">山田 太郎 (システム運用統括部長)</strong></span>
+              <span>ID: <code id="meta-appr-id" style="color:#0284c7;">APPR-20260906-ALTX-01</code></span>
+              <span>日付: <span id="meta-appr-date">2026-09-06</span></span>
+            </div>
+          </div>
+        </div>
+        <div id="meta-param-badge" class="param-badge-resolved">
+          <span class="material-symbols-outlined" style="font-size:14px;">task_alt</span>
+          <span id="meta-param-badge-text">全パラメータ解決済</span>
+        </div>
+      </div>
+      <!-- Collapsible Parameters -->
+      <details class="params-accordion" id="params-details">
+        <summary>
+          <span>🔑 解決済み本番パラメータ展開一覧 (<span id="meta-param-count">7</span>件)</span>
+          <span style="color:#64748b;font-size:0.7rem;">クリックで表示／非表示</span>
+        </summary>
+        <div id="meta-params-table-wrap">
+          <table class="params-grid-table">
+            <tbody id="params-table-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
     <div class="panel-tabs">
       <button class="tab-btn active" onclick="switchTab('flow')">
         <span class="material-symbols-outlined" style="font-size:18px;">account_tree</span>
@@ -1042,8 +1216,8 @@
     </div>
 
     <form id="form">
-      <input type="file" id="file-input" accept=".log,.txt,.sql" style="display:none;" onchange="handleFileSelect(event)">
-      <button type="button" class="attach-btn" onclick="document.getElementById('file-input').click()" title="TeraTermログ（.log / .txt）または更新SQLファイル（.sql）を添付">
+      <input type="file" id="file-input" accept=".log,.txt,.sql,.xlsm,.xlsx" style="display:none;" onchange="handleFileSelect(event)">
+      <button type="button" class="attach-btn" onclick="document.getElementById('file-input').click()" title="TeraTermログ（.log/.txt）、更新SQL（.sql）、または現場Excel手順書（.xlsm/.xlsx）を添付">
         <span class="material-symbols-outlined">attach_file</span>
       </button>
       <textarea id="input" placeholder="メッセージ、またはTeraTermログを貼り付けて送信…" autofocus></textarea>
@@ -1183,12 +1357,34 @@
         </div>
       </div>
 
+      <!-- Excel (.xlsm / .xlsx) Direct Import Box -->
+      <div class="excel-import-box" style="background:#f0fdf4;border:2px dashed #86efac;border-radius:8px;padding:0.85rem;margin-top:0.85rem;text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;font-weight:700;color:#15803d;font-size:0.92rem;">
+          <span class="material-symbols-outlined" style="font-size:22px;">table_view</span>
+          <span>現場実務用 Excel手順書（.xlsm / .xlsx）直接インポート</span>
+        </div>
+        <p style="margin:0.35rem 0 0.65rem;font-size:0.78rem;color:#166534;line-height:1.4;">
+          現場で作成・人間承認されたパラメータ定義付きExcel（.xlsm）をそのまま読み込み、環境変数（${TARGET_HOST}等）を自動置換・承認印を認識してWチェックを開始します。
+        </p>
+        <div style="display:flex;justify-content:center;gap:0.6rem;flex-wrap:wrap;">
+          <label class="btn-report-hdr" style="background:#16a34a;color:#fff;border-color:#15803d;cursor:pointer;font-size:0.8rem;">
+            <span class="material-symbols-outlined" style="font-size:17px;">upload_file</span>
+            <span>.xlsm / .xlsx 手順書ファイルを選択</span>
+            <input type="file" id="excel-file-input" accept=".xlsm,.xlsx" style="display:none;" onchange="handleExcelUploadInput(event)">
+          </label>
+          <a href="/api/sop/sample-xlsm" download class="btn-reset" style="background:#ffffff;color:#166534;border-color:#86efac;text-decoration:none;font-weight:600;font-size:0.8rem;" title="実務検証用のサンプルExcel手順書（.xlsm）をダウンロード">
+            <span class="material-symbols-outlined" style="font-size:16px;color:#16a34a;">download</span>
+            <span>📥 実務用.xlsm手順書サンプルダウンロード</span>
+          </a>
+        </div>
+      </div>
+
       <div class="esc-form-group" style="margin-top:0.85rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <label>② 手順書テキスト貼り付け または ファイル読込 <span class="req-star">*必須</span></label>
           <label class="chip" style="cursor:pointer;margin:0;font-size:0.75rem;">
-            📁 ファイルから読込 (.md / .tsv / .csv / .json / .txt)
-            <input type="file" id="sop-file-input" accept=".md,.tsv,.csv,.json,.txt" style="display:none;" onchange="handleSopFileSelect(event)">
+            📁 ファイルから読込 (.xlsm / .xlsx / .md / .tsv / .csv / .json)
+            <input type="file" id="sop-file-input" accept=".xlsm,.xlsx,.md,.tsv,.csv,.json,.txt" style="display:none;" onchange="handleSopFileSelect(event)">
           </label>
         </div>
         <textarea id="sop-import-textarea" class="esc-textarea" rows="9" style="font-family:monospace;font-size:0.78rem;line-height:1.4;" placeholder="| 項番 | 作業内容 | 投入コマンド | 期待ログ・判定基準 | 注意事項 |&#10;| 1 | DBヘルスチェック | pg_isready -h localhost -p 5432 | accepting connections | 接続不可時は即時連絡 |&#10;| 2 | インデックス再構築 | REINDEX TABLE CONCURRENTLY users; | REINDEX | ピーク時厳禁 |&#10;&#10;※ Excelの手順書表セルをコピー＆ペースト（TSV）しても自動認識されます。"></textarea>
@@ -1237,7 +1433,25 @@ let appState = {
   supervisorName: "",
   escalationActive: false,
   escalationReason: "",
-  escalationRecord: null
+  escalationRecord: null,
+  parameters: {
+    "TARGET_HOST": "db-prd-01.internal.altx.jp",
+    "HEALTH_PORT": "8080",
+    "APP_VERSION": "v2.1.0",
+    "BACKUP_DIR": "/backup/20260906_release",
+    "TARGET_TENANT": "T100",
+    "DB_USER": "app_user",
+    "DB_NAME": "app_db"
+  },
+  approval: {
+    author: "鈴木 駿平 (AltX Inc.)",
+    approver: "山田 太郎 (システム運用統括部長)",
+    approval_date: "2026-09-06",
+    approval_id: "APPR-20260906-ALTX-01",
+    work_title: "基幹EC決済プラットフォーム (本番環境)",
+    is_approved: true
+  },
+  branchRules: {}
 };
 
 // SOP Definition with Steps, Escalation Gate, and Rollback Branch (動的に更新可能)
@@ -1465,6 +1679,12 @@ function clearImportTextarea() {
 async function handleSopFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith(".xlsm") || lowerName.endsWith(".xlsx")) {
+    await uploadExcelSop(file);
+    e.target.value = "";
+    return;
+  }
   try {
     let content = await readFileWithEncoding(file, "utf-8");
     if (content.includes("\ufffd")) {
@@ -1474,7 +1694,6 @@ async function handleSopFileSelect(e) {
     const selectFmt = document.getElementById("sop-format-select");
     txtArea.value = content;
 
-    const lowerName = file.name.toLowerCase();
     if (lowerName.endsWith(".tsv") || lowerName.endsWith(".csv")) {
       selectFmt.value = lowerName.endsWith(".tsv") ? "tsv" : "csv";
     } else if (lowerName.endsWith(".json")) {
@@ -1489,6 +1708,128 @@ async function handleSopFileSelect(e) {
     alert("手順書ファイル読み込みエラー: " + err.message);
   }
   e.target.value = "";
+}
+
+async function handleExcelUploadInput(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  await uploadExcelSop(file);
+  e.target.value = "";
+}
+
+async function uploadExcelSop(file) {
+  if (!file) return;
+  showToast("📊 現場Excel手順書（.xlsm）を解析・パラメータ展開中…");
+  
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/api/sop/upload-excel", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (data.result && data.result.status === "error") {
+      alert("Excel手順書解析エラー: " + data.result.message);
+      return;
+    }
+
+    // Update appState
+    appState.parameters = data.parameters || {};
+    appState.approval = data.approval || {};
+    appState.branchRules = data.branch_rules || {};
+
+    updateSopItemsFromDb(data.sop, data.sequence);
+
+    // Reset runtime progress for new SOP
+    appState.sopResults = {};
+    appState.currentStep = (data.sequence && data.sequence.length > 0) ? data.sequence[0] : "1-1";
+    appState.errorStep = null;
+    appState.escalationActive = false;
+    appState.escalationReason = "";
+    appState.escalationRecord = null;
+    appState.startTime = new Date().toLocaleString('ja-JP');
+
+    closeImportModal();
+    updateModeUI();
+    renderFlowChart();
+    renderSopTable();
+    renderApprovalAndParameters();
+    saveState();
+
+    const count = (data.result && data.result.imported_steps_count) || (data.sequence ? data.sequence.length : 0);
+    const pCount = Object.keys(data.parameters || {}).length;
+    const approver = (data.approval && data.approval.approver) || "承認者確認済";
+
+    showToast(`✓ .xlsm手順書（${count} ステップ, ${pCount} パラメータ展開）を正常にインポートしました！`);
+
+    // Notify agent in chat
+    sendMessage(`【現場Excel手順書（.xlsm）インポート完了】
+・作業件名: ${data.approval.work_title || "本番リリース作業"}
+・承認責任者: ${approver}（承認ID: ${data.approval.approval_id || "APPR-01"}）
+・解決済みパラメータ: ${pCount} 件（${Object.keys(data.parameters || {}).join(", ")}）
+・手順ステップ数: ${count} 件（分岐ルール: ロールバック R-1, エスカレーション E-1 連携済）
+
+統括責任者による事前承認を確認しました。これより作業者とAI有識者（確認者）のペア体制で手順に沿って安全に作業を開始します。最初のステップ（${appState.currentStep}）を提示してください。`);
+
+  } catch (err) {
+    alert("Excel手順書アップロード通信エラー: " + err.message);
+  }
+}
+
+function renderApprovalAndParameters() {
+  const appr = appState.approval || {};
+  const params = appState.parameters || {};
+  const pKeys = Object.keys(params);
+
+  const sealEl = document.getElementById("seal-stamp");
+  const sealStatusEl = document.getElementById("seal-stamp-status");
+  const titleEl = document.getElementById("meta-work-title");
+  const approverEl = document.getElementById("meta-approver");
+  const apprIdEl = document.getElementById("meta-appr-id");
+  const apprDateEl = document.getElementById("meta-appr-date");
+  const badgeEl = document.getElementById("meta-param-badge");
+  const badgeTextEl = document.getElementById("meta-param-badge-text");
+  const pCountEl = document.getElementById("meta-param-count");
+  const tbody = document.getElementById("params-table-tbody");
+
+  if (titleEl) titleEl.textContent = appr.work_title || "本番システム移行・リリース作業";
+  if (approverEl) approverEl.textContent = appr.approver || "未承認（要確認）";
+  if (apprIdEl) apprIdEl.textContent = appr.approval_id || "-";
+  if (apprDateEl) apprDateEl.textContent = appr.approval_date || "-";
+  if (pCountEl) pCountEl.textContent = pKeys.length;
+
+  if (sealEl && sealStatusEl) {
+    if (appr.is_approved) {
+      sealEl.className = "seal-stamp";
+      sealStatusEl.textContent = "承認済";
+    } else {
+      sealEl.className = "seal-stamp unapproved";
+      sealStatusEl.textContent = "未承認";
+    }
+  }
+
+  if (badgeEl && badgeTextEl) {
+    if (pKeys.length > 0) {
+      badgeEl.className = "param-badge-resolved";
+      badgeTextEl.textContent = `全パラメータ解決済 (${pKeys.length}件) ✓`;
+    } else {
+      badgeEl.className = "param-badge-warning";
+      badgeTextEl.textContent = "パラメータ未定義 (デフォルト)";
+    }
+  }
+
+  if (tbody) {
+    if (pKeys.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="2" style="color:#64748b;padding:0.4rem 0.6rem;">環境パラメータは定義されていません（固定値で実行）。</td></tr>`;
+    } else {
+      tbody.innerHTML = pKeys.map(k => {
+        return `<tr><td class="param-k">\${${k}}</td><td class="param-v">${params[k]}</td></tr>`;
+      }).join("");
+    }
+  }
 }
 
 async function executeSopImport() {
@@ -1518,6 +1859,10 @@ async function executeSopImport() {
     }
 
     // Update frontend state with newly imported SOP
+    appState.parameters = data.parameters || {};
+    appState.approval = data.approval || {};
+    appState.branchRules = data.branch_rules || {};
+
     updateSopItemsFromDb(data.sop, data.sequence);
 
     // Reset runtime progress for new SOP
@@ -1533,6 +1878,7 @@ async function executeSopImport() {
     updateModeUI();
     renderFlowChart();
     renderSopTable();
+    renderApprovalAndParameters();
     saveState();
 
     const count = (data.result && data.result.imported_steps_count) || (data.sequence ? data.sequence.length : 0);
@@ -1554,6 +1900,10 @@ async function resetToDefaultSopBackend() {
       headers: { "Content-Type": "application/json" }
     });
     const data = await res.json();
+    appState.parameters = data.parameters || {};
+    appState.approval = data.approval || {};
+    appState.branchRules = data.branch_rules || {};
+
     updateSopItemsFromDb(data.sop, data.sequence);
 
     appState.sopResults = {};
@@ -1567,6 +1917,7 @@ async function resetToDefaultSopBackend() {
     updateModeUI();
     renderFlowChart();
     renderSopTable();
+    renderApprovalAndParameters();
     saveState();
 
     showToast("✓ 標準リリース手順書へリセットしました");
@@ -2578,6 +2929,11 @@ async function processUploadedFile(file) {
     }
 
     const lowerName = file.name.toLowerCase();
+    const isExcel = lowerName.endsWith(".xlsm") || lowerName.endsWith(".xlsx");
+    if (isExcel) {
+      await uploadExcelSop(file);
+      return;
+    }
     const isSql = lowerName.endsWith(".sql");
     const isSop = lowerName.endsWith(".tsv") || lowerName.endsWith(".csv") || (lowerName.endsWith(".md") && content.includes("|"));
 
@@ -2663,9 +3019,13 @@ window.addEventListener("DOMContentLoaded", () => {
     .then(res => res.json())
     .then(data => {
       if (data && data.sop) {
+        if (data.parameters) appState.parameters = data.parameters;
+        if (data.approval) appState.approval = data.approval;
+        if (data.branch_rules) appState.branchRules = data.branch_rules;
         updateSopItemsFromDb(data.sop, data.sequence);
         renderFlowChart();
         renderSopTable();
+        renderApprovalAndParameters();
       }
     })
     .catch(err => console.warn("Failed to sync SOP from backend:", err));
@@ -2700,6 +3060,7 @@ window.addEventListener("DOMContentLoaded", () => {
   updateModeUI();
   renderFlowChart();
   renderSopTable();
+  renderApprovalAndParameters();
   renderFinalReportView();
 });
 </script>

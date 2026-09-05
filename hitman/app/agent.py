@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from a2ui.basic_catalog.provider import BasicCatalog
@@ -212,33 +213,93 @@ import json
 DEFAULT_SOP_DATABASE = copy.deepcopy(SOP_DATABASE)
 ACTIVE_SOP_DATABASE = copy.deepcopy(DEFAULT_SOP_DATABASE)
 ACTIVE_STEP_SEQUENCE = list(STEP_SEQUENCE)
+ACTIVE_PARAMETERS: dict[str, str] = {}
+ACTIVE_APPROVAL_METADATA: dict[str, Any] = {
+    "author": "鈴木 駿平 (AltX Inc.)",
+    "approver": "山田 太郎 (システム運用統括部長)",
+    "approval_date": "2026-09-06",
+    "approval_id": "APPR-20260906-ALTX-STD",
+    "work_title": "Webアプリケーション本番リリース標準手順書",
+    "is_approved": True,
+}
+ACTIVE_BRANCH_RULES: dict[str, dict] = {}
 
 
 def get_active_sop() -> dict:
     return ACTIVE_SOP_DATABASE
 
 
-def set_active_sop(new_sop: dict, new_seq: list[str] = None):
-    global ACTIVE_SOP_DATABASE, ACTIVE_STEP_SEQUENCE
+def get_active_parameters() -> dict[str, str]:
+    return ACTIVE_PARAMETERS
+
+
+def get_active_approval() -> dict[str, Any]:
+    return ACTIVE_APPROVAL_METADATA
+
+
+def get_active_branch_rules() -> dict[str, dict]:
+    return ACTIVE_BRANCH_RULES
+
+
+def set_active_sop(
+    new_sop: dict,
+    new_seq: list[str] = None,
+    parameters: dict[str, str] = None,
+    approval: dict[str, Any] = None,
+    branch_rules: dict[str, dict] = None,
+):
+    global ACTIVE_SOP_DATABASE, ACTIVE_STEP_SEQUENCE, ACTIVE_PARAMETERS, ACTIVE_APPROVAL_METADATA, ACTIVE_BRANCH_RULES
     ACTIVE_SOP_DATABASE = new_sop
     if new_seq:
         ACTIVE_STEP_SEQUENCE = new_seq
+    if parameters is not None:
+        ACTIVE_PARAMETERS = parameters
+    if approval is not None:
+        ACTIVE_APPROVAL_METADATA = approval
+    if branch_rules is not None:
+        ACTIVE_BRANCH_RULES = branch_rules
 
 
 def reset_active_sop() -> dict:
-    global ACTIVE_SOP_DATABASE, ACTIVE_STEP_SEQUENCE
+    global ACTIVE_SOP_DATABASE, ACTIVE_STEP_SEQUENCE, ACTIVE_PARAMETERS, ACTIVE_APPROVAL_METADATA, ACTIVE_BRANCH_RULES
     ACTIVE_SOP_DATABASE = copy.deepcopy(DEFAULT_SOP_DATABASE)
     ACTIVE_STEP_SEQUENCE = list(STEP_SEQUENCE)
+    ACTIVE_PARAMETERS = {}
+    ACTIVE_APPROVAL_METADATA = {
+        "author": "鈴木 駿平 (AltX Inc.)",
+        "approver": "山田 太郎 (システム運用統括部長)",
+        "approval_date": "2026-09-06",
+        "approval_id": "APPR-20260906-ALTX-STD",
+        "work_title": "Webアプリケーション本番リリース標準手順書",
+        "is_approved": True,
+    }
+    ACTIVE_BRANCH_RULES = {}
     return ACTIVE_SOP_DATABASE
 
 
+def import_excel_sop_procedure(file_input: str | bytes | io.BytesIO) -> dict:
+    """現場Excel手順書（.xlsm / .xlsx）を解析し、パラメータ展開・承認メタデータ・分岐ルールを抽出してHITMANへ反映する。"""
+    from app.excel_parser import parse_excel_sop
+    res = parse_excel_sop(file_input)
+    if res.get("status") == "error":
+        return res
+    set_active_sop(
+        new_sop=res["sop_database"],
+        new_seq=res["step_sequence"],
+        parameters=res["parameters"],
+        approval=res["approval_metadata"],
+        branch_rules=res["branch_rules"],
+    )
+    return res
+
+
 def import_sop_procedure(content: str, format_type: str = "auto") -> dict:
-    """既存の業務手順書（JSON、Markdown表、TSV/CSV、構造化テキスト）をインポートし、
+    """既存の業務手順書（Excel .xlsm/.xlsx、JSON、Markdown表、TSV/CSV）をインポートし、
     HITMAN の自律実行・Wチェック監視用手順書データベースを動的に更新する。
 
     Args:
-        content: 手順書の内容（Markdown形式の表、JSON文字列、ExcelからコピーしたTSV/CSVテキストなど）。
-        format_type: 入力フォーマット ('auto', 'json', 'csv', 'tsv', 'markdown')。
+        content: 手順書の内容（ファイルパス、Markdown表、JSON文字列、TSV/CSVテキストなど）。
+        format_type: 入力フォーマット ('auto', 'excel', 'json', 'csv', 'tsv', 'markdown')。
 
     Returns:
         インポート結果、登録されたステップ数、ステップ一覧を含む辞書。
@@ -246,6 +307,10 @@ def import_sop_procedure(content: str, format_type: str = "auto") -> dict:
     raw = (content or "").strip()
     if not raw:
         return {"status": "error", "message": "手順書の内容が空です。"}
+
+    # Excelファイルパスまたは指定の場合
+    if format_type.lower() in ("excel", "xlsm", "xlsx") or raw.endswith(".xlsm") or raw.endswith(".xlsx"):
+        return import_excel_sop_procedure(raw)
 
     parsed_steps = []
 

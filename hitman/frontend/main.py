@@ -14,8 +14,8 @@ import re
 import uuid
 from dotenv import load_dotenv
 import httpx
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
@@ -299,10 +299,19 @@ async def get_sop():
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
-    from app.agent import ACTIVE_STEP_SEQUENCE, get_active_sop
+    from app.agent import (
+        ACTIVE_STEP_SEQUENCE,
+        get_active_approval,
+        get_active_branch_rules,
+        get_active_parameters,
+        get_active_sop,
+    )
     return JSONResponse(content={
         "sop": get_active_sop(),
-        "sequence": ACTIVE_STEP_SEQUENCE
+        "sequence": ACTIVE_STEP_SEQUENCE,
+        "parameters": get_active_parameters(),
+        "approval": get_active_approval(),
+        "branch_rules": get_active_branch_rules(),
     })
 
 
@@ -312,7 +321,14 @@ async def api_sop_import(req: Request):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
-    from app.agent import ACTIVE_STEP_SEQUENCE, get_active_sop, import_sop_procedure
+    from app.agent import (
+        ACTIVE_STEP_SEQUENCE,
+        get_active_approval,
+        get_active_branch_rules,
+        get_active_parameters,
+        get_active_sop,
+        import_sop_procedure,
+    )
 
     body = await req.json()
     content = body.get("content", "")
@@ -322,8 +338,57 @@ async def api_sop_import(req: Request):
     return JSONResponse(content={
         "result": res,
         "sop": get_active_sop(),
-        "sequence": ACTIVE_STEP_SEQUENCE
+        "sequence": ACTIVE_STEP_SEQUENCE,
+        "parameters": get_active_parameters(),
+        "approval": get_active_approval(),
+        "branch_rules": get_active_branch_rules(),
     })
+
+
+@app.post("/api/sop/upload-excel")
+async def api_sop_upload_excel(file: UploadFile = File(...)):
+    """現場Excel手順書（.xlsm / .xlsx）ファイルをアップロードして解析・反映する。"""
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import (
+        ACTIVE_STEP_SEQUENCE,
+        get_active_approval,
+        get_active_branch_rules,
+        get_active_parameters,
+        get_active_sop,
+        import_excel_sop_procedure,
+    )
+
+    contents = await file.read()
+    res = import_excel_sop_procedure(contents)
+    return JSONResponse(content={
+        "result": res,
+        "sop": get_active_sop(),
+        "sequence": ACTIVE_STEP_SEQUENCE,
+        "parameters": get_active_parameters(),
+        "approval": get_active_approval(),
+        "branch_rules": get_active_branch_rules(),
+    })
+
+
+@app.get("/api/sop/sample-xlsm")
+async def api_sop_sample_xlsm():
+    """実務検証用のサンプルExcel手順書（.xlsm）をダウンロード返却する。"""
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sample_path = os.path.join(root_dir, "knowledge", "現場標準_Webアプリ本番リリース手順書_v2.1.xlsm")
+    if not os.path.exists(sample_path):
+        import sys
+        if root_dir not in sys.path:
+            sys.path.insert(0, root_dir)
+        from knowledge.generate_sample_xlsm import generate_sample_xlsm
+        generate_sample_xlsm(sample_path)
+    return FileResponse(
+        sample_path,
+        media_type="application/vnd.ms-excel.sheet.macroEnabled.12",
+        filename="現場標準_Webアプリ本番リリース手順書_v2.1.xlsm",
+    )
 
 
 @app.post("/api/sop/reset")
@@ -332,13 +397,23 @@ async def api_sop_reset(req: Request):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
-    from app.agent import ACTIVE_STEP_SEQUENCE, get_active_sop, reset_active_sop
+    from app.agent import (
+        ACTIVE_STEP_SEQUENCE,
+        get_active_approval,
+        get_active_branch_rules,
+        get_active_parameters,
+        get_active_sop,
+        reset_active_sop,
+    )
 
     res = reset_active_sop()
     return JSONResponse(content={
         "result": res,
         "sop": get_active_sop(),
-        "sequence": ACTIVE_STEP_SEQUENCE
+        "sequence": ACTIVE_STEP_SEQUENCE,
+        "parameters": get_active_parameters(),
+        "approval": get_active_approval(),
+        "branch_rules": get_active_branch_rules(),
     })
 
 
