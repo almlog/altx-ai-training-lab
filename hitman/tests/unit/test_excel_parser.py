@@ -20,11 +20,13 @@ from frontend.main import app
 
 client = TestClient(app)
 
-SAMPLE_XLSM_PATH = os.path.join(
+_base_knowledge = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "knowledge",
-    "現場標準_Webアプリ本番リリース手順書_v2.1.xlsm",
 )
+SAMPLE_XLSM_PATH = os.path.join(_base_knowledge, "standard_web_release_sop_v2.1.xlsm")
+if not os.path.exists(SAMPLE_XLSM_PATH):
+    SAMPLE_XLSM_PATH = os.path.join(_base_knowledge, "現場標準_Webアプリ本番リリース手順書_v2.1.xlsm")
 
 
 def test_parse_sample_xlsm():

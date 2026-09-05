@@ -377,15 +377,20 @@ async def api_sop_upload_excel(file: UploadFile = File(...)):
 async def api_sop_sample_xlsm():
     """実務検証用のサンプルExcel手順書（.xlsm）をダウンロード返却する。"""
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sample_path = os.path.join(root_dir, "knowledge", "現場標準_Webアプリ本番リリース手順書_v2.1.xlsm")
-    if not os.path.exists(sample_path):
+    sample_path = os.path.join(root_dir, "knowledge", "standard_web_release_sop_v2.1.xlsm")
+    legacy_path = os.path.join(root_dir, "knowledge", "現場標準_Webアプリ本番リリース手順書_v2.1.xlsm")
+    target_path = sample_path if os.path.exists(sample_path) else legacy_path
+
+    if not os.path.exists(target_path):
         import sys
         if root_dir not in sys.path:
             sys.path.insert(0, root_dir)
         from knowledge.generate_sample_xlsm import generate_sample_xlsm
         generate_sample_xlsm(sample_path)
+        target_path = sample_path
+
     return FileResponse(
-        sample_path,
+        target_path,
         media_type="application/vnd.ms-excel.sheet.macroEnabled.12",
         filename="現場標準_Webアプリ本番リリース手順書_v2.1.xlsm",
     )

@@ -249,6 +249,6 @@ def generate_sample_xlsm(output_path: str):
 
 if __name__ == "__main__":
     target = os.path.join(
-        os.path.dirname(__file__), "現場標準_Webアプリ本番リリース手順書_v2.1.xlsm"
+        os.path.dirname(__file__), "standard_web_release_sop_v2.1.xlsm"
     )
     generate_sample_xlsm(target)
