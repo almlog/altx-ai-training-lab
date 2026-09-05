@@ -1,9 +1,10 @@
-﻿# AltX 社内AIアプリ開発実践研修カリキュラム
+# AltX 社内AIアプリ開発実践研修カリキュラム
 ## 〜 Google ADK & Gemini で創るエンタープライズAIエージェント・コックピット 〜
 
 **開発・監修**: 株式会社ＡｌｔＸ（AltX Inc.） 鈴木 駿平 (Shunpei Suzuki) <suzuki.shunpei@altx.co.jp>  
 **著作権**: Copyright (c) 2026 Shunpei Suzuki (AltX Inc.) All Rights Reserved.  
-**プロジェクト名**: ltx-ai-training-lab
+**プロジェクト名**: `altx-ai-training-lab`  
+**リファレンス**: Google Cloud「Build with Gemini World Tour · Track 3」のセッションを参考に社内研修用に再構築
 
 ---
 
@@ -14,7 +15,7 @@
 受講者は各自の個人 Google アカウントを用いて独立したクラウド環境を構築し、プロトタイプから本番運用レベルのコンテナデプロイまでを自らの手で完成させます。
 
 ### システムアーキテクチャ
-`
+```text
 [受講者 / オペレーターのブラウザ]
              │
              ▼ (HTTPS / Cloud Run)
@@ -36,7 +37,7 @@
 │  ├─ 長期記憶 (Memory Bank / PreloadMemoryTool)              │
 │  └─ 障害対応ナレッジベース (RAG / consult_sop_knowledge)    │
 └─────────────────────────────────────────────────────────────┘
-`
+```
 
 ---
 

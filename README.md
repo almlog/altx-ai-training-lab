@@ -1,209 +1,158 @@
-<div align="center">
+﻿<div align="center">
 
-<img src="assets/build-with-gemini-banner.png" alt="Build with Gemini" width="100%" />
-
-# 🚀 Build with Gemini · Track 3
-
-### The starter kit for Track 3 of the Build with Gemini World Tour, and a showcase of what participants built with it.
-
-Clone this repo, open [Antigravity](https://antigravity.google), and build your own agent-first app on Google Cloud. Every project in the [gallery below](#-featured-projects) was built the same way: prototyped with Antigravity and `agents-cli`, equipped with Memory, tools, storage, and RAG, deployed to Agent Platform, and given a face on Cloud Run.
+# 🚀 AltX AI Training Lab
+### 株式会社ＡｌｔＸ 社内AIアプリ開発実践研修 ＆ 実務実証基盤
+**Google ADK (Agent Development Kit) & Gemini 2.5 Flash で創るエンタープライズAIエージェント**
 
 <br/>
 
-![Build with Gemini](https://img.shields.io/badge/Build%20with%20Gemini-World%20Tour-4285F4?logo=google&logoColor=white)
-![Track 3](https://img.shields.io/badge/Track%203-Agent--First%20Apps-EA4335)
-![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Agent%20Platform-4285F4?logo=googlecloud&logoColor=white)
-![Built with ADK](https://img.shields.io/badge/Built%20with-ADK%20%2B%20agents--cli-34A853)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-8-blue)
+[![Organization](https://img.shields.io/badge/Organization-AltX%20Inc.%20(%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE%EF%BC%A1%EF%BD%8C%EF%BD%94%EF%BC%B8)-0052CC)](https://www.altx.co.jp/)
+[![Developer](https://img.shields.io/badge/Developer-Shunpei%20Suzuki%20(AltX%20Inc.)-blue)](mailto:suzuki.shunpei@altx.co.jp)
+[![Based on](https://img.shields.io/badge/Reference-Google%20Build%20with%20Gemini%20(Track%203)-4285F4?logo=google)](https://cszhu.github.io/build-with-gemini/)
+[![Engine](https://img.shields.io/badge/Model-Gemini%202.5%20Flash-34A853?logo=googlecloud)](https://cloud.google.com/vertex-ai)
+[![Framework](https://img.shields.io/badge/Framework-Google%20ADK%201.5.0-FBBC05)](https://google.github.io/adk-docs/)
+[![Deployment](https://img.shields.io/badge/Production-Cloud%20Run%20(Live)-34A853?logo=googlecloud)](https://altx-hitman-cockpit-1070367799384.us-central1.run.app)
+[![Tests](https://img.shields.io/badge/Tests-21%2F21%20Passed-brightgreen)](https://github.com/almlog/altx-ai-training-lab)
 
-<sub>📖 <a href="https://cszhu.github.io/build-with-gemini/">Lab Guide</a> · 🛠️ <a href="https://google.github.io/agents-cli/guide/getting-started/">agents-cli</a> · 🤖 <a href="https://google.github.io/adk-docs/">ADK</a></sub>
+<br/>
+
+<sub>💡 本プロジェクトは、Google Cloud 公式の「Build with Gemini World Tour · Track 3 (Agent-First Apps)」の知見・アーキテクチャを参考に、<br/>
+株式会社ＡｌｔＸ（AltX Inc.）の社内研修カリキュラムおよび実務運用向けに **鈴木 駿平（Shunpei Suzuki）が独自に再構築・設計・開発したオリジナル研修・実証リポジトリ** です。</sub>
 
 </div>
 
 ---
 
-## 📚 Table of Contents
+## 📖 研修の背景と目的
 
-- [🧩 Anatomy of a Track 3 Project](#-anatomy-of-a-track-3-project)
-- [📂 Featured Projects](#-featured-projects)
-  - [🛍️ Commerce & Marketplace Agents](#️-commerce--marketplace-agents)
-  - [🍳 Food & Recipe Agents](#-food--recipe-agents)
-  - [✈️ Travel & Local Agents](#️-travel--local-agents)
-  - [💪 Health, Fitness & Wellness Agents](#-health-fitness--wellness-agents)
-  - [📚 Learning & Knowledge Agents](#-learning--knowledge-agents)
-  - [🎨 Creative & Media Agents](#-creative--media-agents)
-  - [🏢 Productivity & Enterprise Agents](#-productivity--enterprise-agents)
-  - [🧪 Experimental & Other](#-experimental--other)
-- [🧠 What's in this Repo](#-whats-in-this-repo)
-- [🧰 Build Your Own](#-build-your-own)
-- [📚 Resources](#-resources)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+企業のDXやシステム運用現場では、いまだ「Excel手順書を目視確認し、ターミナルに手動でコマンドを投入し、ログを目視判定する」という旧来の作業形態が残っており、ヒューマンエラーによるシステム障害のリスクが常に存在します。
+
+本研修（**AltX AI Training Lab**）では、受講生各自が個人の Google アカウントを用いて独立したクラウド環境を構築し、最新の生成AIフレームワークである **Google ADK (Agent Development Kit)** と **Gemini 2.5 Flash** を駆使して、現場の課題を技術的に解決する **「AIペアオペレーター・コックピット（HITMAN）」** をゼロから開発・テスト・クラウド本番デプロイまで自走して習得します。
 
 ---
 
-## 🧩 Anatomy of a Track 3 Project
+## 🌟 オリジナル開発プロダクト：HITMAN
 
-Every app in this collection is built from the same set of Google Cloud building blocks introduced in the lab. Once you understand this shape, you can read any project here at a glance:
+本リポジトリの中核成果物として、鈴木 駿平が設計・開発した **HITMAN: SOP Navigation & AI Pair Operator Cockpit** が含まれています。
 
-| Layer | What it does | Powered by |
-|---|---|---|
-| 🤖 **The Agent** | The core reasoning loop | [ADK](https://google.github.io/adk-docs/) + [`agents-cli`](https://google.github.io/agents-cli/guide/getting-started/), scaffolded with [Antigravity](https://antigravity.google) |
-| 🧠 **Memory** | Remembers facts across sessions | [Agent Platform Memory Bank](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/memory-bank) |
-| 🗄️ **Structured data** | Inventory, records, lists | [Firestore](https://console.cloud.google.com/firestore) |
-| 🖼️ **Files & blobs** | Images, media, assets | [Cloud Storage](https://console.cloud.google.com/storage) |
-| 🔧 **Tools** | Take real actions and fetch real data | ADK function tools |
-| 📖 **RAG** | Answers grounded in your documents | [Vertex AI RAG Engine](https://console.cloud.google.com/agent-platform/rag) |
-| 🎨 **Media generation** | Creates images (and video) on demand | `gemini-3.1-flash-lite-image` (Nano Banana 2 Lite) · Omni (video) |
-| 🧪 **Code sandbox** | Safely runs generated code | Agent Platform code execution |
-| 🪟 **Agent-first UI** | Cards and tables instead of plain text | [A2UI](https://adk.dev/integrations/a2ui/) |
-| 🌐 **Frontend** | A shareable web face | FastAPI proxy on [Cloud Run](https://cloud.google.com/run) |
-
----
-
-## 📂 Featured Projects
-
-A showcase of what workshop participants built with this lab. Entries are added here from the swag and gallery submission form after each event, so the categories below start empty and fill in over time. Browse them for inspiration, or [submit your own](#-contributing) once you've published your project with the `publish-to-github` skill.
-
-<!--
-Add one entry per project, in this format:
-- 🌿 **[Project Name](https://github.com/their-handle/their-repo)**: one-line description of what it does. <br/> <sub>by [@handle](https://github.com/handle)</sub>
-
-Bump the "Projects" badge count at the top when you add one.
--->
-
-### 🛍️ Commerce & Marketplace Agents
-
-### 🍳 Food & Recipe Agents
-
-- 🥫 **[Smart Pantry Recipe Concierge](https://github.com/matthewrose/buildwithgemini-smart-pantry-recipe-concierge)**: Tracks your pantry and recommends recipes grounded in a real recipe corpus. <br/> <sub>by [@matthewrose](https://github.com/matthewrose)</sub>
-
-### ✈️ Travel & Local Agents
-
-- ⛈️ **[SafeStageWX](https://github.com/felix1028/buildwithgemini-safestagewx)**: An agentic mobile app that helps event planners identify weather threats and climate risks for an event given its date and location, providing tailored preparedness timelines from months out down to hourly day-of forecasts. <br/> <sub>by [@felix1028](https://github.com/felix1028)</sub>
-- 🌇 **[Sidewalk & Sun](https://github.com/OlafHaalstra/buildwithgemini-sidewalk-and-sun)**: Recommends sunny or shaded NYC spots from a curated 500-venue corpus, plotted on an interactive map. <br/> <sub>by [@OlafHaalstra](https://github.com/OlafHaalstra)</sub>
-
-### 💪 Health, Fitness & Wellness Agents
-
-- 🏊 **[TriCoach AI](https://github.com/common-aman/buildwithgemini-tricoach-ai)**: A triathlon coach that logs workouts, computes training zones, and generates motivational visuals. <br/> <sub>by [@common-aman](https://github.com/common-aman)</sub>
-
-### 📚 Learning & Knowledge Agents
-
-- 🎤 **[Interview Coach (PrepPal)](https://github.com/VineethBaradi/buildwithgemini-interview-coach)**: A mock-interview coach that runs LLM-driven practice sessions from a Firestore question bank and gives performance feedback. <br/> <sub>by [@VineethBaradi](https://github.com/VineethBaradi)</sub>
-
-### 🎨 Creative & Media Agents
-
-### 🏢 Productivity & Enterprise Agents
-
-- 🔧 **[GitCraft](https://github.com/fpobletemu/buildwithgemini-gitcraft)**: A developer git assistant that inspects your repo and drafts Conventional-Commits-style messages, grounded in a commit-style guide. <br/> <sub>by [@fpobletemu](https://github.com/fpobletemu)</sub>
-- 🖥️ **[IT Helpdesk Agent](https://github.com/NaweedAhmadi/buildwithgemini-it-helpdesk-agent)**: An IT support assistant that answers from a knowledge base and remembers context across sessions, with a ticket dashboard UI. <br/> <sub>by [@NaweedAhmadi](https://github.com/NaweedAhmadi)</sub>
-
-### 🧪 Experimental & Other
-
-- 🃏 **[Poker Agent](https://github.com/jakecho1108/buildwithgemini-poker-agent)**: A poker trainer with a real 800-iteration Monte Carlo equity engine and strategy tips grounded in a poker playbook. <br/> <sub>by [@jakecho1108](https://github.com/jakecho1108)</sub>
-
----
-
-## 🧠 What's in this Repo
-
-The `.agents/` folder teaches Antigravity how to build agents on Google Cloud.
-
-### Skills
-
-A **skill** is a bundle of instructions that loads automatically when it's relevant, so the agent gets the workflow right in fewer steps instead of rediscovering it each time.
-
-| Skill | What it does |
-| --- | --- |
-| [`pick-your-agent-project`](.agents/skills/pick-your-agent-project/SKILL.md) | Brainstorm your app idea and write a project brief |
-| [`troubleshoot-lab-setup`](.agents/skills/troubleshoot-lab-setup/SKILL.md) | Verify your environment and fix common setup errors |
-| [`memory-bank-setup`](.agents/skills/setup-memory-bank/SKILL.md) | Add cross-session memory to your agent with Vertex AI Memory Bank |
-| [`rag-engine-setup`](.agents/skills/build-rag/SKILL.md) | Ground your agent on documents with a serverless Vertex AI RAG corpus |
-| [`enable-a2ui`](.agents/skills/enable-a2ui/SKILL.md) | Make your agent reply with rich UI cards (A2UI) in the ADK dev UI |
-| [`build-agent-frontend`](.agents/skills/build-agent-frontend/SKILL.md) | Generate a FastAPI chat frontend and ship it to Cloud Run |
-| [`record-demo`](.agents/skills/record-demo/SKILL.md) | Record a branded demo video of your agent, with an optional AI soundtrack |
-| [`publish-to-github`](.agents/skills/publish-to-github/SKILL.md) | Publish your finished project to your own GitHub and submit it for swag |
-
-### Pre-configured tools (MCP)
-
-[`.agents/mcp_config.json`](.agents/mcp_config.json) wires up two [Model Context Protocol](https://modelcontextprotocol.io/) servers that authenticate with your gcloud credentials, so the agent can look things up instead of guessing:
-
-- **Firebase**: work directly with Firestore and other Firebase services
-- **Google Developer Knowledge**: grounded access to Google's official docs (Cloud, Firebase, ADK, Agent Platform)
-
-### Layout
+👉 **本番稼働 URL (Cloud Run)**:  
+**[https://altx-hitman-cockpit-1070367799384.us-central1.run.app](https://altx-hitman-cockpit-1070367799384.us-central1.run.app)**
 
 ```text
-.agents/
-├── mcp_config.json    # Firebase + Developer Knowledge MCP servers
-└── skills/            # the workshop skills listed above
+[受講者 / オペレーターのブラウザ]
+             │
+             ▼ (HTTPS: https://altx-hitman-cockpit-1070367799384.us-central1.run.app)
+┌─────────────────────────────────────────────────────────────┐
+│ Cloud Run サービス: altx-hitman-cockpit                     │
+│  ├─ 左右2画面 Web Cockpit (FastAPI Proxy + A2UI レンダラー)  │
+│  │   ├─ 左ペイン: AI対話チャット & A2UI リッチカード        │
+│  │   └─ 右ペイン: 手順進捗バー、SQL影響評価、エスカレゲート │
+│  └─ HITMAN ADK Agent Core (Gemini 2.5 Flash 推論)           │
+│      ├─ 手順書エンジン (SOP Database: Step 1-1 〜 4-2)      │
+│      ├─ ログ客観自動判定 (verify_step_output)               │
+│      ├─ SQL事前影響評価 (analyze_sql_impact)                │
+│      ├─ エスカレーション・ゲート制御 (evaluate_escalation)  │
+│      ├─ 最終評価完了報告書 (generate_final_report)          │
+│      ├─ 長期記憶 (Memory Bank / PreloadMemoryTool)          │
+│      └─ 障害対応ナレッジベース (RAG / consult_sop_knowledge)│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### HITMAN の主要機能
+1. **厳格なステップ順序制御（Anti-Skip Gate）**: 直前手順のログ検証（`SUCCESS`）なしに後続手順へのスキップをブロック。
+2. **事前確認（Pre-check）の強制**: ディスク容量（`df -h`）や事前SELECTが通るまで本番コマンドを出力しない安全設計。
+3. **SQL影響事前評価エンジン**: UPDATE/DELETE文の対象テーブル、更新対象列、WHERE句条件をAIが事前検証し事故を防止。
+4. **客観的判断根拠を要求するエスカレーション・ゲート**: 異常発生時、協議結果・GO/NOGO・客観的判断根拠（こんきょ）が入力されない限り作業再開を遮断。上長承認で特別モード（2人体制）へ移行。
+5. **最終評価完了報告書**: Before/After、所要時間、成果物保全状況（バックアップ、ログ）のレポートを自動生成。
+6. **長期記憶（Memory Bank）**: セッションを跨いでオペレーターの作業履歴や特記事項を保持。
+7. **RAG ナレッジベース**: ディスク枯渇、DBロック待ち、500エラーの障害対応ナレッジを即時検索（Gemini 2.5 の競合を回避するプレーン関数ツール構成）。
+
+---
+
+## 📚 社内研修カリキュラム (`TRAINING_GUIDE.md`)
+
+受講生は、本リポジトリに同梱されている **[`TRAINING_GUIDE.md`](./TRAINING_GUIDE.md)** に沿って以下の全10マイルストーンを実践します：
+
+| マイルストーン | 学習内容・実践タスク |
+|---|---|
+| **マイルストーン 1** | **GCPプロジェクト作成と課金の有効化**（初心者の最重要関門・トラブル回避） |
+| **マイルストーン 2** | **APIキー発行と種別の理解**（AI Studio `AIza...` と Vertex AI Express `AQ...` の違い） |
+| **マイルストーン 3** | **クラウド必須APIの一括有効化**（`aiplatform`, `run`, `cloudbuild`, `artifactregistry`） |
+| **マイルストーン 4** | **ADK エージェントの設計とツール実装**（プロンプト、SOPツール、ログ検証） |
+| **マイルストーン 5** | **セッション長期記憶（Memory Bank）の統合**（`PreloadMemoryTool` とコールバック） |
+| **マイルストーン 6** | **RAG（障害対応ナレッジ）の実装**（Gemini 2.5 におけるスキーマ競合 400 エラーの回避策） |
+| **マイルストーン 7** | **2画面 Web Cockpit の立ち上げ**（FastAPI プロキシ ＆ A2UI レンダラー） |
+| **マイルストーン 8** | **テスト自動化による品質保証**（Pytest によるユニット・結合 21件テスト） |
+| **マイルストーン 9** | **Cloud Run へのワンコマンド本番デプロイ**（Dockerfile設計、即時URL発行） |
+| **マイルストーン 10** | **GitHub へのプッシュと成果物提出** |
+
+---
+
+## 🗂️ リポジトリ構成
+
+```text
+altx-ai-training-lab/
+├── TRAINING_GUIDE.md         # ★社内研修用 完全ハンズオンガイド（全10マイルストーン）
+├── hitman/                   # ★独立プロダクト: AIペアオペレーター・コックピット
+│   ├── app/                  # ADK エージェントコア (agent.py, fast_api_app.py, a2ui_utils.py)
+│   ├── frontend/             # 2画面 Web Cockpit (main.py, static/index.html)
+│   ├── knowledge/            # 障害対応 SOP ガイドナレッジ (RAG検索対象)
+│   ├── tests/                # 自動テストスイート (unit/ 16件, integration/ 4件, dummy 1件 = 計21件)
+│   ├── Dockerfile            # Cloud Run 本番用コンテナ定義
+│   ├── .dockerignore         # ビルド高速化除外設定
+│   ├── .env.example          # 受講生用 設定テンプレート（秘匿情報保護）
+│   ├── pyproject.toml        # 依存関係定義 (ADK, FastAPI, Uvicorn, Pytest)
+│   └── README.md             # HITMAN 固有ドキュメント
+├── .agents/skills/           # 研修で使用するエージェント開発支援スキル群
+│   ├── build-agent-frontend/ # フロントエンド作成・Cloud Run連携スキル
+│   ├── enable-a2ui/          # A2UI リッチカード生成スキル
+│   ├── setup-memory-bank/    # Vertex AI Memory Bank 導入スキル
+│   ├── build-rag/            # RAG ナレッジ構築スキル
+│   ├── troubleshoot-lab-setup/# 環境検証・トラブルシューティングスキル
+│   └── publish-to-github/    # GitHub 公開・提出スキル
+└── project_brief.md          # プロジェクト企画設計書
 ```
 
 ---
 
-## 🧰 Build Your Own
+## ⚡ クイックスタート（受講生向け）
 
-The full, step-by-step walkthrough lives on the **[lab guide](https://cszhu.github.io/build-with-gemini/)**. This is the short version.
-
-**Prerequisites** (the lab workstation comes with all of this pre-installed; you'll need it if you're running on your own machine):
-
-- A **Google Cloud project** with billing enabled
-- **[Antigravity](https://antigravity.google)** (`agy`), the coding agent that loads the skills above
-- **[agents-cli](https://google.github.io/agents-cli/guide/getting-started/)**, built on the [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
-- Authenticated gcloud: `gcloud auth login` and `gcloud auth application-default login`
-- A personal **GitHub account** for the final publish-and-submit step
-
-**Quickstart:**
-
+### 1. リポジトリのクローン
 ```bash
-git clone https://github.com/cszhu/build-with-gemini
-cd build-with-gemini
-agy
+git clone https://github.com/almlog/altx-ai-training-lab.git
+cd altx-ai-training-lab/hitman
 ```
 
-On startup, Antigravity scans the `.agents/` folder and loads the skills and tools above automatically. In the AGY prompt:
-
-```text
-/skills            # see the installed skills
-/mcp               # confirm the firebase + google-developer-knowledge tools are connected
+### 2. 依存関係のインストール
+```bash
+# uv パッケージマネージャーを使用
+uv sync
 ```
 
-```text
-Verify my setup.   # runs the troubleshoot-lab-setup skill to check your environment
+### 3. 環境変数の設定
+```bash
+cp .env.example .env
+# .env を開き、自身が発行した Vertex AI Express キー (AQ...) または AI Studio キーを設定
 ```
 
-Then follow the [lab guide](https://cszhu.github.io/build-with-gemini/) to design, build, deploy, and share your agent, start to finish.
+### 4. 自動テストの実行
+```bash
+uv run pytest
+# 全21件のテストが Green になることを確認
+```
+
+### 5. ローカルコックピットの起動
+```bash
+uv run python frontend/main.py
+# ブラウザで http://127.0.0.1:3000 にアクセス
+```
 
 ---
 
-## 📚 Resources
+## 📄 著作権・開発者情報
 
-- **[Lab guide](https://cszhu.github.io/build-with-gemini/)**: the step-by-step workshop
-- [Antigravity](https://antigravity.google)
-- [agents-cli](https://google.github.io/agents-cli/guide/getting-started/)
-- [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
-- [Gemini Enterprise Agent Platform](https://docs.cloud.google.com/gemini-enterprise-agent-platform)
-
----
-
-## 🤝 Contributing
-
-**Built something?** Publish it with the `publish-to-github` skill and submit it through the form it gives you. Submissions get you swag, and standout projects get added to the [Featured Projects](#-featured-projects) gallery above.
-
-**Found a bug?** If you hit a rough edge in a skill or the lab, please [open an issue](https://github.com/cszhu/build-with-gemini/issues).
-
----
-
-## 📄 License
-
-This is not an officially supported Google product and is provided for the Build with Gemini workshop for demonstration purposes only.
-
----
-
-## 👨‍💻 Author & Copyright
-
-- **Lead Developer**: Shunpei Suzuki (`suzuki.shunpei@altx.co.jp`)
-- **Organization**: AltX Inc. (株式会社AltX)
-- **Project**: HITMAN - SOP Navigation & AI Pair Operator Cockpit
-- **Copyright**: Copyright (c) 2026 Shunpei Suzuki. All rights reserved.
-
+- **開発・設計・監修**: 鈴木 駿平 (Shunpei Suzuki)
+- **所属**: 株式会社ＡｌｔＸ (AltX Inc.)
+- **連絡先**: `suzuki.shunpei@altx.co.jp`
+- **Copyright**: Copyright (c) 2026 Shunpei Suzuki (AltX Inc.) All Rights Reserved.
+- **Reference**: Based on the concepts and architecture of Google Cloud's Build with Gemini World Tour (Track 3), restructured for enterprise training.
