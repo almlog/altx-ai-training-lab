@@ -11,7 +11,7 @@
 [![Engine](https://img.shields.io/badge/Model-Gemini%203.6%20Flash-34A853?logo=googlecloud)](https://cloud.google.com/vertex-ai)
 [![Framework](https://img.shields.io/badge/Framework-Google%20ADK%201.5.0-FBBC05)](https://google.github.io/adk-docs/)
 [![Production URL](https://img.shields.io/badge/Production-Cloud%20Run%20(Live)-34A853?logo=googlecloud)](https://altx-hitman-cockpit-1070367799384.us-central1.run.app)
-[![Tests](https://img.shields.io/badge/Tests-31%2F31%20Passed-brightgreen)](https://github.com/almlog/altx-ai-training-lab)
+[![Tests](https://img.shields.io/badge/Tests-35%2F35%20Passed-brightgreen)](https://github.com/almlog/altx-ai-training-lab)
 
 <br/>
 
@@ -24,7 +24,7 @@
 
 > [!TIP]
 > 📘 **公式ハンズオンマニュアル（完全版ドキュメント）を公開中！**  
-> Google 公式ワークショップ級の網羅性で、全8種の Skills、2種の MCP、HITMAN Cockpit と AntiGravity の 3者協調アーキテクチャ、およびステップ T-1 〜 T-6（コースA / コースB）の操作手順を完全網羅した **[`TRAINING_LAB_MANUAL.md`](./TRAINING_LAB_MANUAL.md)** をご覧ください。
+> Google 公式ワークショップ級の網羅性で、全8種の Skills、2種の MCP、HITMAN Cockpit と AntiGravity の 3者協調アーキテクチャ、作業フォルダ・Python環境の自由カスタマイズ（ゼロコンフィグ対応）、およびステップ T-1 〜 T-6（コースA / コースB）の操作手順を完全網羅した **[`TRAINING_LAB_MANUAL.md`](./TRAINING_LAB_MANUAL.md)** をご覧ください。
 
 ---
 
@@ -35,6 +35,7 @@
 1. **HITMAN Cockpit（公式ペアオペレーター）**:
    - 鈴木 駿平が設計・開発し、Cloud Run 上で本番稼働中（`gemini-3.6-flash` 駆動）。
    - 受講生はユーザーとしてアクセスし、Excel手順書（.xlsm）やSOPを進行、安全チェックとWチェック承認を経て、「検証済みプロンプト」を取得します。
+   - **作業環境の柔軟カスタマイズ**: 受講生各自のPCドライブ構成や会社規程に合わせ、作業フォルダ（Dドライブ等）やPython仮想環境（Conda/venv等）を自由に指定可能です（デフォルトのままでも即時進行可能）。
 2. **アンチグラビティ（Antigravity）へのコピペ体験**:
    - 受講生は自身の **個人Googleアカウントで払い出した有料APIキー** を設定したアンチグラビティにプロンプトを投入。
    - 裏側で待機する **Skills（M0〜M5 ガバナンス研修、開発・デプロイスキル）** が自律的に処理を完遂する様を体験します。
@@ -78,6 +79,7 @@
 2. **有料APIキーの発行**（クレジットカード紐付け、または事前入金の請求先アカウント設定）
 3. **アンチグラビティ（Google AntiGravity / agy）のインストールとログイン認証**
 4. **Python（3.11 または 3.12+）のインストールおよびターミナルでの実行確認**
+5. *(任意)* **作業フォルダやPython仮想環境の事前検討**（Dドライブや特定Conda環境を使いたい受講生は、パスを事前に決めておくことで HITMAN の「⚙️ 研修環境設定」から一発適用可能）
 
 ---
 
@@ -90,11 +92,11 @@
 | **マイルストーン 1** | **個人GCPプロジェクト作成と課金の有効化**（初心者の最重要関門・トラブル回避） |
 | **マイルストーン 2** | **個人有料APIキー発行と種別の理解**（Vertex AI Express `AQ...` と AI Studio `AIza...`） |
 | **マイルストーン 3** | **クラウド必須APIの一括有効化**（`aiplatform`, `run`, `cloudbuild`, `artifactregistry`） |
-| **マイルストーン 4** | **HITMAN Cockpit 操作とプロンプト取得**（Excel .xlsm 投入、パラメータ解決、Wチェック） |
+| **マイルストーン 4** | **HITMAN Cockpit 操作とプロンプト取得**（Excel .xlsm 投入、パラメータ解決、Wチェック、環境設定） |
 | **マイルストーン 5** | **アンチグラビティ投入と裏側SKILL体感**（M0〜M5 ガバナンス・セキュリティ検証） |
 | **マイルストーン 6** | **思い思いのツール企画**（`pick-your-agent-project` によるアイデアの具現化） |
 | **マイルストーン 7** | **エージェントコード＆フロントエンド実装**（ADK Agent + A2UI + FastAPI） |
-| **マイルストーン 8** | **テスト自動化による品質保証**（Pytest による 31件全テスト Green） |
+| **マイルストーン 8** | **テスト自動化による品質保証**（Pytest による 35件全テスト Green） |
 | **マイルストーン 9** | **自作ツールの Cloud Run 本番デプロイ**（受講生個人GCP環境への即時URL発行） |
 | **マイルストーン 10** | **成果物の発表と共有**（GitHub リポジトリプッシュとチーム内デモ） |
 
