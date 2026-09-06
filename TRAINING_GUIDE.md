@@ -5,7 +5,8 @@
 **著作権**: Copyright (c) 2026 Shunpei Suzuki (AltX Inc.) All Rights Reserved.  
 **プロジェクト名**: `altx-ai-training-lab`  
 **HITMAN 稼働エンジン**: `gemini-3.6-flash` (Vertex AI / Global)  
-**公式プラットフォーム URL**: [https://altx-hitman-cockpit-1070367799384.us-central1.run.app](https://altx-hitman-cockpit-1070367799384.us-central1.run.app)
+**公式プラットフォーム URL**: [https://altx-hitman-cockpit-1070367799384.us-central1.run.app](https://altx-hitman-cockpit-1070367799384.us-central1.run.app)  
+**公式ハンズオンマニュアル（完全版）**: [`TRAINING_LAB_MANUAL.md`](./TRAINING_LAB_MANUAL.md)
 
 ---
 

@@ -22,6 +22,12 @@
 
 ---
 
+> [!TIP]
+> 📘 **公式ハンズオンマニュアル（完全版ドキュメント）を公開中！**  
+> Google 公式ワークショップ級の網羅性で、全8種の Skills、2種の MCP、HITMAN Cockpit と AntiGravity の 3者協調アーキテクチャ、およびステップ T-1 〜 T-6（コースA / コースB）の操作手順を完全網羅した **[`TRAINING_LAB_MANUAL.md`](./TRAINING_LAB_MANUAL.md)** をご覧ください。
+
+---
+
 ## 📖 研修コンセプト：全員がHITMANを作るのではない
 
 本研修の目的は、全員が同じHITMANを複製・スクラッチ開発することではありません。
@@ -98,6 +104,7 @@
 
 ```text
 altx-ai-training-lab/
+├── TRAINING_LAB_MANUAL.md    # ★公式ハンズオンマニュアル（Skills・MCP・先走り防止・T-1〜T-6完全解説）
 ├── TRAINING_GUIDE.md         # ★社内研修用 完全ハンズオンガイド（全10マイルストーン）
 ├── README.md                 # ★本ドキュメント
 ├── hitman/                   # ★公式プロダクト: AIペアオペレーター・コックピット
