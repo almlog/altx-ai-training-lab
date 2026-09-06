@@ -563,6 +563,25 @@ def test_frontend_training_course_endpoints():
     assert post_data["course"] == "hitman_clone"
     assert "T-1" in post_data["sop"]
 
+    # 4. POST /api/training/parameters (Custom Workspace & Env)
+    res_params = client.post("/api/training/parameters", json={
+        "workspace_dir": "C:\\custom\\agent_ws",
+        "agent_name": "custom_agent",
+        "python_env": "conda_env"
+    })
+    assert res_params.status_code == 200
+    param_data = res_params.json()
+    assert param_data["status"] == "success"
+    assert param_data["parameters"]["WORKSPACE_DIR"] == "C:\\custom\\agent_ws"
+
+    # 5. GET /api/sop with custom parameters
+    res_custom_sop = client.get("/api/sop?mode=TRAINING&course=original&workspace=C:\\custom\\agent_ws&agent=custom_agent")
+    assert res_custom_sop.status_code == 200
+    custom_sop_data = res_custom_sop.json()
+    assert "C:\\custom\\agent_ws" in custom_sop_data["sop"]["T-1"]["command"]
+    assert "custom_agent" in custom_sop_data["sop"]["T-3"]["command"]
+
+
 
 
 

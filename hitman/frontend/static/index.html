@@ -290,6 +290,26 @@
     border-color: #93c5fd;
     color: #1e40af;
   }
+  .btn-config-env {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 5px;
+    color: #166534;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    vertical-align: middle;
+  }
+  .btn-config-env:hover {
+    background: #dcfce7;
+    border-color: #4ade80;
+  }
+
   .flow-banner.training {
     background: #fef3c7;
     border-color: #fcd34d;
@@ -1784,6 +1804,7 @@ html, body {
       <button class="chip" onclick="quickSend('ステップ 3-3 のDB更新事前確認を実行したいです')">▶ 3-3 DB事前確認/SQL評価</button>
       <button class="chip" onclick="quickPasteLog()">📋 ログ貼り付け判定</button>
       <button class="chip" id="chip-training-idea" style="display:none;color:#0284c7;font-weight:700;" onclick="quickSend('現場課題を解決するオリジナルAIアプリを企画・開発したいです。相談に乗ってください。')">💡 自作アプリ企画</button>
+      <button class="chip" id="chip-training-env" style="display:none;color:#059669;font-weight:700;" onclick="openTrainingEnvModal()">⚙️ フォルダ・環境設定</button>
       <button class="chip" id="chip-training-hitman" style="display:none;color:#059669;font-weight:700;" onclick="quickSend('何を作ればいいか思いつかないので、HITMAN作成コースでペアオペレーターの構築・デプロイを体験したいです。')">🛠️ HITMAN作成体験</button>
       <button class="chip" id="chip-supervisor-skip" style="display:none;color:#d97706;font-weight:700;" onclick="openSupervisorSkipModal()">⏩ 上長責任スキップ</button>
       <button class="chip" style="color:#b45309;" onclick="openEscalationModal()">🚨 エスカレ対応ゲート</button>
@@ -2031,6 +2052,53 @@ html, body {
       <button class="chip" onclick="resetToDefaultSopBackend()">🔄 標準手順書へリセット</button>
       <button class="chip" onclick="closeImportModal()">キャンセル</button>
       <button class="btn-report-hdr" style="background:#2563eb;color:#fff;border-color:#1d4ed8;" onclick="executeSopImport()">🚀 手順書を自律抽出してインポート実行</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Training Environment & Workspace Customization -->
+<div id="modal-training-env" class="modal-backdrop">
+  <div class="modal-dialog" style="max-width:560px;">
+    <div class="modal-header">
+      <h3>
+        <span class="material-symbols-outlined" style="color:#38bdf8;">settings</span>
+        <span>研修環境・ワークスペース設定</span>
+      </h3>
+      <button type="button" class="modal-close-btn" onclick="closeTrainingEnvModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:0.65rem 0.8rem;font-size:0.78rem;color:#1e40af;line-height:1.45;">
+        💡 <strong>受講生ごとに自由な作業環境を設定・連動できます</strong><br>
+        「特にこだわりがない」「初めてで迷う」場合は、<strong>デフォルト値のまま進めてOK</strong>です（ワンクリックで開始できます）。<br>
+        独自の作業フォルダ（例: <code>C:\workspace\my_agent</code> や <code>D:\ai-lab</code>）や、特定の仮想環境（<code>.venv</code>、Conda等）を使いたい場合は、以下で指定してください。後続の全コマンド（T-1〜T-6）とAGYプロンプトに自動反映されます。
+      </div>
+
+      <div class="esc-form-group">
+        <label>📁 作業ディレクトリ（フォルダ名またはフルパス）</label>
+        <input type="text" id="env-modal-workspace" class="esc-input" placeholder="例: altx-agent-workspace または C:\workspace\my_agent" value="altx-agent-workspace">
+        <span style="font-size:0.72rem;color:#64748b;">※空白の場合はデフォルト値 <code>altx-agent-workspace</code> が適用されます。</span>
+      </div>
+
+      <div class="esc-form-group">
+        <label>🤖 開発エージェント名（自作アプリ識別名）</label>
+        <input type="text" id="env-modal-agent" class="esc-input" placeholder="例: my_agent または my_hitman" value="my_agent">
+        <span style="font-size:0.72rem;color:#64748b;">※フォルダ名やCloud Runサービス名のプレフィックスに使用されます。</span>
+      </div>
+
+      <div class="esc-form-group">
+        <label>🐍 Python / 仮想環境設定</label>
+        <select id="env-modal-pyenv" class="esc-input" onchange="toggleCustomPyEnv(this.value)">
+          <option value="uv (自動管理)">🟢 uv (推奨・高速自動パッケージ管理)</option>
+          <option value=".venv (標準仮想環境)">🟡 .venv (標準 python -m venv)</option>
+          <option value="system (既存環境)">🔵 既存のシステム/Conda環境をそのまま使用</option>
+          <option value="custom">✏️ カスタムコマンド / フルパス指定...</option>
+        </select>
+        <input type="text" id="env-modal-custom-pyenv" class="esc-input" style="display:none;margin-top:4px;" placeholder="例: C:\Python311\python.exe または conda activate myenv">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-report-hdr" style="color:#64748b;border-color:#cbd5e1;" onclick="resetTrainingEnvDefaults()">デフォルトに戻す</button>
+      <button type="button" class="btn-report-hdr" style="background:#2563eb;color:#fff;border-color:#1d4ed8;" onclick="saveTrainingEnvModal()">✓ 設定を保存して全手順に反映</button>
     </div>
   </div>
 </div>
@@ -2513,7 +2581,10 @@ function renderApprovalAndParameters() {
   }
 
   if (badgeEl && badgeTextEl) {
-    if (pKeys.length > 0) {
+    if (appState.mode === "TRAINING") {
+      badgeEl.className = "param-badge-resolved";
+      badgeTextEl.innerHTML = `<span style="margin-right:4px;">全パラメータ設定済 (${pKeys.length}件) ✓</span> <button type="button" class="btn-config-env" onclick="openTrainingEnvModal()" title="作業フォルダ・パス・エージェント名・仮想環境設定を変更"><span class="material-symbols-outlined" style="font-size:13px;">settings</span><span>⚙️ 研修環境設定</span></button>`;
+    } else if (pKeys.length > 0) {
       badgeEl.className = "param-badge-resolved";
       badgeTextEl.textContent = `全パラメータ解決済 (${pKeys.length}件) ✓`;
     } else {
@@ -2638,6 +2709,7 @@ function updateModeUI() {
   const modeSelect = document.getElementById("mode-select-hdr");
   const chipTrainingIdea = document.getElementById("chip-training-idea");
   const chipTrainingHitman = document.getElementById("chip-training-hitman");
+  const chipTrainingEnv = document.getElementById("chip-training-env");
   const chipSupervisorSkip = document.getElementById("chip-supervisor-skip");
 
   if (modeSelect) {
@@ -2782,9 +2854,118 @@ async function switchTrainingCourse(course) {
   }
 }
 
+
+// --- Training Environment Customization Logic ---
+function resolveStepVariables(text) {
+  if (!text) return "";
+  const ws = (appState.parameters && appState.parameters["WORKSPACE_DIR"]) || "altx-agent-workspace";
+  const agentName = (appState.parameters && appState.parameters["AGENT_NAME"]) || (appState.trainingCourse === "hitman_clone" ? "my_hitman" : "my_agent");
+  const pyEnv = (appState.parameters && appState.parameters["PYTHON_ENV"]) || "uv (自動管理)";
+
+  let res = text
+    .replaceAll("${WORKSPACE_DIR}", ws)
+    .replaceAll("${AGENT_NAME}", agentName)
+    .replaceAll("${PYTHON_ENV}", pyEnv);
+
+  if (appState.mode === "TRAINING" && ws !== "altx-agent-workspace") {
+    res = res.replaceAll("altx-agent-workspace", ws);
+  }
+  return res;
+}
+
+function openTrainingEnvModal() {
+  const ws = (appState.parameters && appState.parameters["WORKSPACE_DIR"]) || "altx-agent-workspace";
+  const agent = (appState.parameters && appState.parameters["AGENT_NAME"]) || (appState.trainingCourse === "hitman_clone" ? "my_hitman" : "my_agent");
+  const pyenv = (appState.parameters && appState.parameters["PYTHON_ENV"]) || "uv (自動管理)";
+
+  document.getElementById("env-modal-workspace").value = ws;
+  document.getElementById("env-modal-agent").value = agent;
+
+  const sel = document.getElementById("env-modal-pyenv");
+  const customIn = document.getElementById("env-modal-custom-pyenv");
+  let matched = false;
+  for (let opt of sel.options) {
+    if (opt.value === pyenv) {
+      sel.value = pyenv;
+      matched = true;
+      break;
+    }
+  }
+  if (!matched) {
+    sel.value = "custom";
+    customIn.style.display = "block";
+    customIn.value = pyenv;
+  } else {
+    customIn.style.display = "none";
+  }
+
+  document.getElementById("modal-training-env").classList.add("show");
+}
+
+function closeTrainingEnvModal() {
+  document.getElementById("modal-training-env").classList.remove("show");
+}
+
+function toggleCustomPyEnv(val) {
+  const customIn = document.getElementById("env-modal-custom-pyenv");
+  if (val === "custom") {
+    customIn.style.display = "block";
+    customIn.focus();
+  } else {
+    customIn.style.display = "none";
+  }
+}
+
+function resetTrainingEnvDefaults() {
+  document.getElementById("env-modal-workspace").value = "altx-agent-workspace";
+  document.getElementById("env-modal-agent").value = appState.trainingCourse === "hitman_clone" ? "my_hitman" : "my_agent";
+  document.getElementById("env-modal-pyenv").value = "uv (自動管理)";
+  document.getElementById("env-modal-custom-pyenv").style.display = "none";
+  document.getElementById("env-modal-custom-pyenv").value = "";
+}
+
+async function saveTrainingEnvModal() {
+  const ws = document.getElementById("env-modal-workspace").value.trim() || "altx-agent-workspace";
+  const agent = document.getElementById("env-modal-agent").value.trim() || (appState.trainingCourse === "hitman_clone" ? "my_hitman" : "my_agent");
+  const selPy = document.getElementById("env-modal-pyenv").value;
+  const customPy = document.getElementById("env-modal-custom-pyenv").value.trim();
+  const pyenv = selPy === "custom" ? (customPy || "カスタム環境") : selPy;
+
+  if (!appState.parameters) appState.parameters = {};
+  appState.parameters["WORKSPACE_DIR"] = ws;
+  appState.parameters["AGENT_NAME"] = agent;
+  appState.parameters["PYTHON_ENV"] = pyenv;
+
+  closeTrainingEnvModal();
+  showToast("⚙️ 研修環境設定を全手順に反映中…");
+
+  try {
+    await fetch("/api/training/parameters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace_dir: ws, agent_name: agent, python_env: pyenv })
+    });
+
+    const res = await fetch(`/api/sop?mode=TRAINING&course=${encodeURIComponent(appState.trainingCourse || 'original')}&workspace=${encodeURIComponent(ws)}&agent=${encodeURIComponent(agent)}&env=${encodeURIComponent(pyenv)}`);
+    const data = await res.json();
+    if (data && data.sop) {
+      updateSopItemsFromDb(data.sop, data.sequence);
+    }
+  } catch(e) {
+    console.warn("Backend training param sync failed:", e);
+  }
+
+  renderFlowChart();
+  renderSopTable();
+  renderApprovalAndParameters();
+  saveState();
+  showToast(`✓ 作業環境を『${ws}』に更新しました（全手順・プロンプトに連動）`);
+}
+
 function copyAgyPrompt(stepId) {
   const step = SOP_ITEMS.find(s => s.id === stepId);
-  const promptText = (step && step.agy_prompt) ? step.agy_prompt : `ステップ ${stepId} を AntiGravity で実行してください。`;
+  let promptText = (step && step.agy_prompt) ? step.agy_prompt : `ステップ ${stepId} を AntiGravity で実行してください。`;
+  promptText = resolveStepVariables(promptText);
   
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(promptText).then(() => {
@@ -3329,7 +3510,7 @@ function renderFlowChart() {
           <span class="step-num-tag">${step.id}</span>
           <span class="step-title-text">${step.title}</span>
         </div>
-        <div class="step-cmd-preview">${step.cmd.substring(0, 45)}...</div>
+        <div class="step-cmd-preview">${resolveStepVariables(step.cmd).substring(0, 45)}...</div>
         ${step.agy_prompt ? `<div style="margin-top:0.35rem;"><button type="button" class="btn-copy-agy" onclick="event.stopPropagation(); copyAgyPrompt('${step.id}')" title="AntiGravity投入用プロンプトをクリップボードにコピー"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span><span>AGYプロンプトをコピー</span></button></div>` : ""}
       </div>
       <div class="step-status-icon">${icon}</div>
@@ -3411,7 +3592,7 @@ function renderFlowChart() {
           <span class="step-num-tag" style="background:#fee2e2;color:#991b1b;">${step.id}</span>
           <span class="step-title-text">${step.title}</span>
         </div>
-        <div class="step-cmd-preview">${step.cmd.substring(0, 45)}...</div>
+        <div class="step-cmd-preview">${resolveStepVariables(step.cmd).substring(0, 45)}...</div>
         ${step.agy_prompt ? `<div style="margin-top:0.35rem;"><button type="button" class="btn-copy-agy" onclick="event.stopPropagation(); copyAgyPrompt('${step.id}')" title="AntiGravity投入用プロンプトをクリップボードにコピー"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span><span>AGYプロンプトをコピー</span></button></div>` : ""}
       </div>
       <div class="step-status-icon">${icon}</div>
@@ -3462,7 +3643,7 @@ function renderSopTable() {
     tr.innerHTML = `
       <td><strong>${step.id}</strong></td>
       <td>${step.title}</td>
-      <td><code style="font-size:0.75rem;background:#f1f5f9;padding:2px 4px;border-radius:3px;">${step.cmd.substring(0, 30)}...</code></td>
+      <td><code style="font-size:0.75rem;background:#f1f5f9;padding:2px 4px;border-radius:3px;">${resolveStepVariables(step.cmd).substring(0, 30)}...</code></td>
       <td>${statusBadge}</td>
       <td><small style="color:#64748b;">${timeStr.replace(/^[0-9]+-/, '')}</small></td>
     `;

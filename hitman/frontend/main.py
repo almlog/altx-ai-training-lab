@@ -337,7 +337,7 @@ async def chat(req: Request):
 
 
 @app.get("/api/sop")
-async def get_sop(mode: str = None, course: str = None):
+async def get_sop(mode: str = None, course: str = None, workspace: str = None, agent: str = None, env: str = None):
     import sys
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
@@ -349,13 +349,37 @@ async def get_sop(mode: str = None, course: str = None):
         get_active_sop,
         get_active_step_sequence,
     )
+    custom_params = {}
+    if workspace:
+        custom_params["WORKSPACE_DIR"] = workspace
+    if agent:
+        custom_params["AGENT_NAME"] = agent
+    if env:
+        custom_params["PYTHON_ENV"] = env
+
     return JSONResponse(content={
-        "sop": get_active_sop(mode=mode, course=course),
+        "sop": get_active_sop(mode=mode, course=course, params=custom_params if custom_params else None),
         "sequence": get_active_step_sequence(mode=mode, course=course),
         "parameters": get_active_parameters(mode=mode),
         "approval": get_active_approval(mode=mode, course=course),
         "branch_rules": get_active_branch_rules(),
     })
+
+
+@app.post("/api/training/parameters")
+async def set_training_params(req: Request):
+    body = await req.json()
+    ws = body.get("workspace_dir", "").strip()
+    agent_name = body.get("agent_name", "").strip()
+    py_env = body.get("python_env", "").strip()
+
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import set_training_environment
+    res = set_training_environment(workspace_dir=ws, agent_name=agent_name, python_env=py_env)
+    return JSONResponse(content=res)
 
 
 @app.post("/api/sop/import")

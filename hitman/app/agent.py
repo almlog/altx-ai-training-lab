@@ -407,6 +407,8 @@ TRAINING_SOP_HITMAN_CLONE = {
 TRAINING_PARAMETERS = {
     "PROJECT_NAME": "AltX AI実践研修 開発ラボ",
     "WORKSPACE_DIR": "altx-agent-workspace",
+    "AGENT_NAME": "my_agent",
+    "PYTHON_ENV": "uv (自動管理)",
     "PRIMARY_MODEL": "gemini-3.8-flash",
     "FALLBACK_MODEL": "gemini-3.6-flash",
     "REPO_URL": "https://github.com/almlog/altx-ai-training-lab.git",
@@ -473,18 +475,71 @@ def set_training_course(course_type: str) -> dict:
     }
 
 
-def get_training_sop(course_type: str = None) -> dict:
-    """研修モードの指定コース用SOPを取得する。"""
+def set_training_environment(workspace_dir: str = "", agent_name: str = "", python_env: str = "") -> dict:
+    """【研修モード専用】受講生のPC環境に合わせて、作業ディレクトリのパス・フォルダ名、開発エージェント名、仮想環境設定をカスタマイズする。
+    
+    Args:
+        workspace_dir: 作業ディレクトリのパスまたはフォルダ名（例: 'altx-agent-workspace', 'C:\\workspace\\my_agent', '~/dev/my_agent'）。
+        agent_name: 自作するAIエージェントのモジュール名（例: 'my_agent', 'my_hitman', 'db_bot'）。
+        python_env: Python仮想環境の実行方法（例: 'uv', '.venv', 'python -m venv .venv', 'conda'）。
+    """
+    global TRAINING_PARAMETERS
+    if workspace_dir:
+        TRAINING_PARAMETERS["WORKSPACE_DIR"] = workspace_dir.strip()
+    if agent_name:
+        TRAINING_PARAMETERS["AGENT_NAME"] = agent_name.strip()
+    if python_env:
+        TRAINING_PARAMETERS["PYTHON_ENV"] = python_env.strip()
+
+    ws = TRAINING_PARAMETERS["WORKSPACE_DIR"]
+    ag = TRAINING_PARAMETERS["AGENT_NAME"]
+    pe = TRAINING_PARAMETERS["PYTHON_ENV"]
+
+    return {
+        "status": "success",
+        "parameters": dict(TRAINING_PARAMETERS),
+        "message": f"研修環境設定を更新しました：作業フォルダ『{ws}』、エージェント名『{ag}』、仮想環境『{pe}』。後続の全手順・プロンプトに反映されます。",
+    }
+
+
+def get_training_sop(course_type: str = None, params: dict = None) -> dict:
+    """研修モードの指定コース用SOPを取得し、動的パラメータ（WORKSPACE_DIR, AGENT_NAME, PYTHON_ENV等）を展開して返却する。"""
     c = (course_type or ACTIVE_TRAINING_COURSE).lower()
-    if "hitman" in c or "clone" in c or "クローン" in c:
-        return copy.deepcopy(TRAINING_SOP_HITMAN_CLONE)
-    return copy.deepcopy(TRAINING_SOP_ORIGINAL)
+    is_hitman = "hitman" in c or "clone" in c or "クローン" in c
+    base_sop = copy.deepcopy(TRAINING_SOP_HITMAN_CLONE if is_hitman else TRAINING_SOP_ORIGINAL)
+
+    p = dict(TRAINING_PARAMETERS)
+    if params:
+        p.update({k: v for k, v in params.items() if v})
+
+    ws = p.get("WORKSPACE_DIR", "altx-agent-workspace")
+    if params and "AGENT_NAME" in params and params["AGENT_NAME"]:
+        agent_name = params["AGENT_NAME"]
+    else:
+        agent_name = "my_hitman" if is_hitman else p.get("AGENT_NAME", "my_agent")
+    py_env = p.get("PYTHON_ENV", "uv (自動管理)")
+
+    for step_id, step in base_sop.items():
+        for field in ["command", "expected_check", "cautions", "agy_prompt", "title", "objective"]:
+            val = step.get(field)
+            if isinstance(val, str):
+                # Replace placeholders and default literal with configured workspace
+                val = val.replace("${WORKSPACE_DIR}", ws)
+                val = val.replace("${AGENT_NAME}", agent_name)
+                val = val.replace("${PYTHON_ENV}", py_env)
+                val = val.replace("altx-agent-workspace", ws)
+                if is_hitman and agent_name != "my_hitman":
+                    val = val.replace("my_hitman", agent_name)
+                elif not is_hitman and agent_name != "my_agent":
+                    val = val.replace("my_agent", agent_name)
+                step[field] = val
+    return base_sop
 
 
-def get_active_sop(mode: str = None, course: str = None) -> dict:
+def get_active_sop(mode: str = None, course: str = None, params: dict = None) -> dict:
     effective_mode = mode or ACTIVE_OPERATION_MODE
     if effective_mode == MODE_TRAINING:
-        return get_training_sop(course or ACTIVE_TRAINING_COURSE)
+        return get_training_sop(course or ACTIVE_TRAINING_COURSE, params=params)
     return ACTIVE_SOP_DATABASE
 
 
@@ -1073,21 +1128,23 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
     if step_str.startswith("T-") or "T-" in step_str or (ACTIVE_OPERATION_MODE == MODE_TRAINING and step_str in TRAINING_STEP_SEQUENCE):
         # T-1: 開発環境構築とスキル同期
         if "T-1" in step_str:
+            ws_cur = TRAINING_PARAMETERS.get("WORKSPACE_DIR", "altx-agent-workspace")
+            ws_cur_clean = ws_cur.replace("\\", "/").rstrip("/").split("/")[-1].lower()
             has_t1_sig = any(k in output_lower for k in (
-                "altx-agent-workspace", "altx-ai-training-lab", "git clone", "cloning into",
+                ws_cur_clean, "altx-agent-workspace", "altx-ai-training-lab", "git clone", "cloning into",
                 "gemini-3.8-flash", "gemini-3.6-flash", "python", "3.11", "3.12", "api key",
-                "requirements", "virtualenv", ".venv", "active"
+                "requirements", "virtualenv", ".venv", "active", "mkdir", "new-item", "cd "
             ))
             if not has_t1_sig:
-                return _make_no_log_response("T-1", "フォルダ作成（altx-agent-workspace）、git clone、または環境確認の実行ログが確認できません。")
+                return _make_no_log_response("T-1", f"作業フォルダ作成（{ws_cur}）、git clone、または環境確認の実行ログが確認できません。")
             return {
                 "verdict": "SUCCESS",
                 "w_check_status": "VERIFIED_APPROVED",
                 "step_id": "T-1",
-                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】専用作業ディレクトリの作成、講師リポジトリのクローン、およびスキル同期を確認しました。",
+                "autonomous_verdict": f"【AI確認者 Wチェック承認 ✓】作業ディレクトリ（{ws_cur}）の作成、リポジトリクローン、および環境構築を確認しました。",
                 "message": (
                     "【判定: 合格】開発環境の準備、リポジトリクローン、スキル同期を客観確認しました！\n"
-                    "専用フォルダ（altx-agent-workspace）とスキル群が正しくセットアップされています。\n"
+                    f"作業フォルダ（{ws_cur}）とスキル群が正しくセットアップされています。\n"
                     "続いて『ステップ T-2: 要件定義（Project Brief策定）』へ進んでください。"
                 ),
             }
@@ -1924,6 +1981,7 @@ root_agent = Agent(
         request_supervisor_step_skip,
         guide_training_app_creation,
         set_training_course,
+        set_training_environment,
     ],
     after_agent_callback=generate_memories_callback,
     after_model_callback=a2ui_callback,
