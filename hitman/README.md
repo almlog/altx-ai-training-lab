@@ -11,7 +11,8 @@
 
 **HITMAN** は、ミッションクリティカルなシステム移行・夜間リリース作業において、ヒューマンエラーによるシステム障害（コマンド誤投入、WHERE句欠落による全件更新、確認漏れ）を技術的に防ぐ **AIペアオペレーター・コックピット** です。
 
-従来の「手順書を人間が目視で読み、手動でコマンドをコピペし、手作業でログを確認する」運用を刷新し、**Google ADK (Agent Development Kit)** と **Gemini 2.5 Flash** の推論能力を統合。左右2画面の専用コックピットを通じて、安全かつ客観的なリリース作業を実現します。
+従来の「手順書を人間が目視で読み、手動でコマンドをコピペし、手作業でログを確認する」運用を刷新し、**Google ADK (Agent Development Kit)** と **Gemini 3.6 Flash** の推論能力を統合。左右2画面の専用コックピットを通じて、安全かつ客観的なリリース作業を実現します。
+
 
 ---
 
@@ -61,7 +62,8 @@
                              ▼ (ADK Runner)
 ┌─────────────────────────────────────────────────────────────┐
 │ HITMAN ADK Agent (app/agent.py)                             │
-│  ├─ Gemini 2.5 Flash (Client / Vertex AI Express Mode)      │
+│  ├─ Gemini 3.6 Flash (Client / Vertex AI Express Mode)      │
+│  ├─ 3 Operation Modes (NORMAL / TRAINING / SPECIAL_PAIR)    │
 │  ├─ PreloadMemoryTool (Memory Bank 長期記憶)                │
 │  ├─ SOP Database (手順書定義)                               │
 │  ├─ verify_step_output (ログ自動判定)                       │
