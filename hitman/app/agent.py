@@ -225,6 +225,18 @@ ACTIVE_APPROVAL_METADATA: dict[str, Any] = {
 ACTIVE_BRANCH_RULES: dict[str, dict] = {}
 
 
+# 運用モード定数
+MODE_NORMAL = "NORMAL"
+MODE_TRAINING = "TRAINING"
+MODE_SPECIAL_PAIR = "SPECIAL_PAIR"
+
+# アクティブ運用モードと監査ステート
+ACTIVE_OPERATION_MODE: str = MODE_NORMAL
+ACTIVE_SUPERVISOR_NAME: str = ""
+ACTIVE_SUPERVISOR_ROLE: str = ""
+ACTIVE_AUDIT_LOG: list[dict] = []
+
+
 def get_active_sop() -> dict:
     return ACTIVE_SOP_DATABASE
 
@@ -239,6 +251,59 @@ def get_active_approval() -> dict[str, Any]:
 
 def get_active_branch_rules() -> dict[str, dict]:
     return ACTIVE_BRANCH_RULES
+
+
+def get_operation_mode() -> dict:
+    """現在のHITMAN運用モード（NORMAL/TRAINING/SPECIAL_PAIR）および適用ルールを取得する。"""
+    mode_descriptions = {
+        MODE_NORMAL: "【通常モード】現場本番作業用。客観的コマンド実行ログが必須。自己申告は冷徹に即時差し戻し（Wチェック厳格判定）。",
+        MODE_TRAINING: "【研修モード】教育用特別モード。受講生の手順書活用によるオリジナルアプリ開発・デプロイ体験を伴走支援。自作アプリが思いつかない受講生にはHITMAN作成を支援。客観証跡の重要性を教育的に指導。",
+        MODE_SPECIAL_PAIR: "【エスカレ特別モード（2人体制）】上長・リーダー同席ペア作業。原則ログ確認必須。AIからのスキップ提案は厳禁。上長責任のもと理由と責任を明文化した場合のみ例外スキップ可能。",
+    }
+    return {
+        "status": "success",
+        "mode": ACTIVE_OPERATION_MODE,
+        "description": mode_descriptions.get(ACTIVE_OPERATION_MODE, "不明なモード"),
+        "supervisor_name": ACTIVE_SUPERVISOR_NAME,
+        "supervisor_role": ACTIVE_SUPERVISOR_ROLE,
+        "audit_logs_count": len(ACTIVE_AUDIT_LOG),
+    }
+
+
+def set_operation_mode(mode: str, supervisor_name: str = "", supervisor_role: str = "") -> dict:
+    """HITMANの運用モードを切り替える（'NORMAL', 'TRAINING', 'SPECIAL_PAIR'）。
+
+    Args:
+        mode: 切り替え先モード ('NORMAL', 'TRAINING', 'SPECIAL_PAIR')。
+        supervisor_name: エスカレ特別モード時の上長・リーダー氏名。
+        supervisor_role: 上長・リーダーの役職。
+
+    Returns:
+        切り替え後の運用モード情報。
+    """
+    global ACTIVE_OPERATION_MODE, ACTIVE_SUPERVISOR_NAME, ACTIVE_SUPERVISOR_ROLE
+    m = (mode or "").strip().upper()
+    if "TRAIN" in m or "研修" in m:
+        ACTIVE_OPERATION_MODE = MODE_TRAINING
+    elif "SPEC" in m or "PAIR" in m or "エスカレ" in m or "特別" in m or "2人" in m:
+        ACTIVE_OPERATION_MODE = MODE_SPECIAL_PAIR
+        if supervisor_name:
+            ACTIVE_SUPERVISOR_NAME = supervisor_name
+        if supervisor_role:
+            ACTIVE_SUPERVISOR_ROLE = supervisor_role
+    elif "NORM" in m or "通常" in m:
+        ACTIVE_OPERATION_MODE = MODE_NORMAL
+    else:
+        return {
+            "status": "error",
+            "message": f"無効なモード指定です: '{mode}'。'NORMAL', 'TRAINING', 'SPECIAL_PAIR' のいずれかを指定してください。",
+        }
+    return {
+        "status": "success",
+        "mode": ACTIVE_OPERATION_MODE,
+        "message": f"【運用モード変更】HITMANの運用モードを【{ACTIVE_OPERATION_MODE}】へ切り替えました。",
+        "details": get_operation_mode(),
+    }
 
 
 def set_active_sop(
@@ -544,10 +609,111 @@ def compress_large_log(log_text: str, max_lines: int = 120) -> str:
     return "\n".join(summary)
 
 
+def is_pure_assertion_without_log(raw: str) -> bool:
+    """入力テキストが客観的なコマンド実行ログではなく、自然言語による口頭自己申告かどうかを判定する。"""
+    if not raw or not raw.strip():
+        return True
+
+    clean = sanitize_terminal_log(raw).strip()
+    clean_lower = clean.lower()
+
+    # 自己申告でよく使われるフレーズ
+    assertion_phrases = [
+        "空いてた", "空いてる", "空きありました", "容量ありました", "容量は問題", "容量は空",
+        "大丈夫", "問題ありません", "問題なし", "正常でした", "正常です",
+        "完了しました", "終わりました", "実行しました", "オッケー", "おっけー",
+        "成功しました", "うまく行きました", "うまくいきました", "できました",
+        "進めよう", "進めてください", "次へ進んで", "次に進もう", "次に行こう",
+        "10gb以上", "空き容量十分", "問題なく終了", "エラーなし",
+    ]
+    has_assertion_phrase = any(p in clean_lower for p in assertion_phrases)
+
+    # ターミナル特有の証跡シグネチャ
+    terminal_signatures = [
+        "filesystem", "mounted", "use%", "/backup", "/dev/", "avail",
+        "tar:", ".tar.gz", "tar -", "rsync", "sent ", "bytes/sec",
+        "active: active", "active: inactive", "main pid", "systemctl", "inactive (dead)",
+        "query ok", "row affected", "rows affected", "row in set", "rows in set", "empty set", "+---+", "| id",
+        "http/1.", "http/2", "curl -", "200 ok", "content-type",
+        "bash", "root@", "user@", "$ ", "# ", "0 error", "job for",
+    ]
+    has_terminal_sig = any(sig in clean_lower for sig in terminal_signatures)
+
+    # 自己申告フレーズを含んでいてターミナルシグネチャがない場合、確実に自己申告
+    if has_assertion_phrase and not has_terminal_sig:
+        return True
+
+    # ターミナルシグネチャが全くなく、日本語の会話文・口頭文である場合
+    lines = [l for l in clean.splitlines() if l.strip()]
+    if not has_terminal_sig and len(lines) <= 3:
+        has_symbols = any(c in clean for c in ("/", "%", "|", "=", "$", "#", ">"))
+        if not has_symbols or any(c in clean for c in ("。", "！", "？", "ね", "よ")):
+            return True
+
+    return False
+
+
+def _make_no_log_response(step_str: str, detail: str = "") -> dict:
+    """客観ログ未検知時のレスポンスを運用モードに応じて生成する。"""
+    global ACTIVE_OPERATION_MODE, ACTIVE_SUPERVISOR_NAME
+
+    if ACTIVE_OPERATION_MODE == MODE_TRAINING:
+        return {
+            "verdict": "FAILED",
+            "w_check_status": "TRAINING_GUIDANCE",
+            "step_id": step_str,
+            "reason": f"【研修教育ガイダンス】客観的なターミナル実行ログが検知できません。{detail}",
+            "autonomous_verdict": (
+                "【研修インストラクター 指導】自己申告のみではWチェックを通せません。"
+                "本番運用では『客観的証跡（エビデンス）』を残すことがエンジニアを守る鉄則です！"
+            ),
+            "message": (
+                "【研修モード・教育ガイダンス】自己申告だけでは合格判定を出せません！\n"
+                "本番作業では『客観的な証拠（ターミナルログ）』を残すことがプロとしての基本です。\n"
+                f"ターミナルで該当コマンドを実行し、出力されたログをそのまま貼り付けてみましょう！\n"
+                f"（補足: {detail}）"
+            ),
+        }
+    elif ACTIVE_OPERATION_MODE == MODE_SPECIAL_PAIR:
+        sup_text = f"（同席責任者: {ACTIVE_SUPERVISOR_NAME}）" if ACTIVE_SUPERVISOR_NAME else ""
+        return {
+            "verdict": "FAILED",
+            "w_check_status": "REJECTED_NO_LOG",
+            "step_id": step_str,
+            "reason": f"【エスカレ特別モード（2人体制）】客観的実行ログが検知できません。{detail}",
+            "autonomous_verdict": (
+                f"【2人体制AI確認者 判定】客観ログ未検知。上長・リーダー同席下であっても実行ログの客観確認は省略できません。"
+                "※万一状況によりスキップが必要な場合は、上長責任のもと理由を明文化したスキップ指示を行ってください。"
+            ),
+            "message": (
+                f"【判定: ログ未検知・2人体制確認待ち】{sup_text}\n"
+                "エスカレ特別モードであっても、客観的実行ログなしに前進することはできません。\n"
+                "ターミナルの実行結果ログを貼り付けてください。\n"
+                "（※現場状況によりやむを得ずスキップする場合は、上長責任のもとでスキップ理由を明文化した指示を行ってください）"
+            ),
+        }
+    else:
+        # MODE_NORMAL
+        return {
+            "verdict": "FAILED",
+            "w_check_status": "REJECTED_NO_LOG",
+            "step_id": step_str,
+            "reason": f"客観的実行ログが検知できません。自己申告のみによる承認は重大インシデント防止規程により厳格に禁止されています。{detail}",
+            "autonomous_verdict": (
+                "【AI確認者 判定】自己申告のみを検知。ターミナル実行ログが存在しないためWチェック即時差し戻しを行います。"
+            ),
+            "message": (
+                "【判定: ログ未検知・Wチェック差し戻し】\n"
+                "自己申告のみでの進行は承認できません。重大インシデント防止のため、客観的証跡（コマンド実行結果ログ）が必須です。\n"
+                "ターミナルから生ログをコピーして貼り付けてください。"
+            ),
+        }
+
+
 def verify_step_output(step_number: int | str, command_output: str) -> dict:
     """オペレーターがコマンドを実行した出力ログを有識者AI（確認者）として客観検証し、
     Wチェック判定（合格承認・リトライ遮断・自律分岐指示）を行う。
-    TeraTermのログ取得機能によるタイムスタンプやエスケープシーケンス、大量ログにも対応。
+    自己申告のみの入力は厳格に差し戻し、客観証跡ログを必須とします。
 
     Args:
         step_number: 検証対象のステップ番号（例: 1, '1-1', '1-2'）。
@@ -581,7 +747,7 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
 
     # 2. データベースデッドロック・制約違反・データ不在 -> エスカレーション対応 (BRANCH_ESCALATION -> E-1)
     escalation_keywords = [
-        "deadlock found", "lock wait timeout exceeded", "foreign key constraint fails",
+        "deadlock found", "deadlock detected", "lock wait timeout exceeded", "foreign key constraint fails",
         "duplicate entry", "table doesn't exist", "relation does not exist",
     ]
     for ek in escalation_keywords:
@@ -610,8 +776,16 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
                 "message": f"【判定: 不合格】ログ内にエラー '{kw}' が見つかりました。直ちに手順を中断してください。",
             }
 
-    # 4. 事前確認: df -h 空き容量チェック
+    # 4. 自己申告文（口頭テキスト・ログ不在）の検知と厳格差し戻し
+    if is_pure_assertion_without_log(command_output):
+        return _make_no_log_response(step_str, "ターミナルログの出力構造（ヘッダー、終了ステータス等）が見当たりません。")
+
+    # 5. 事前確認: df -h 空き容量チェック
     if "1-1" in step_str or ("df" in output_lower and "1" in step_str):
+        has_df_evidence = any(k in output_lower for k in ("filesystem", "mounted", "avail", "/backup", "/dev/", "use%", "size"))
+        if not has_df_evidence:
+            return _make_no_log_response("1-1", "df -h コマンドの出力（Filesystem, Size, Used, Avail, Mounted on等）が確認できません。")
+
         if "100%" in output_lower or "99%" in output_lower or "no space left" in output_lower:
             return {
                 "verdict": "FAILED",
@@ -744,6 +918,149 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
         "step_id": step_str,
         "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】実行ログを客観検証しました。異常なし・合格と判定し、次ステップへの進行を承認します。",
         "message": "【判定: 合格】ログの確認が完了しました。異常は見当たりません。次の手順へ進んでください。",
+    }
+
+
+def request_supervisor_step_skip(
+    step_to_skip: str,
+    supervisor_name: str,
+    supervisor_role: str,
+    skip_rationale: str,
+    user_responsibility_confirmed: bool = False,
+) -> dict:
+    """【エスカレ特別モード専用】現場の状況によりやむを得ず手順をスキップする場合、
+    上長・リーダーの立場からの具体的理由および利用者責任の明文化を受けて例外スキップを承認する。
+    ※重要: AIが自発的にスキップを提案・誘導することは固く禁止されています。利用者の指示・自己責任に基づき呼び出されます。
+
+    Args:
+        step_to_skip: スキップ対象のステップ番号（例: '1-1', '3-2'）。
+        supervisor_name: 指示を出した上長・作業責任者の氏名（必須）。
+        supervisor_role: 上長・責任者の役職（例: '運用統括マネージャー', 'DBAリード'。必須）。
+        skip_rationale: スキップする業務的・技術的判断理由（必須・具体的理由）。
+        user_responsibility_confirmed: 利用者責任においてリスクを受容しスキップすることの明示的な同意（True必須）。
+
+    Returns:
+        スキップ承認結果と監査ログ記録。
+    """
+    global ACTIVE_AUDIT_LOG
+    s_name = (supervisor_name or "").strip()
+    s_role = (supervisor_role or "").strip()
+    s_rat = (skip_rationale or "").strip()
+    s_step = str(step_to_skip).strip().upper()
+
+    if not s_name or not s_role or not s_rat or len(s_rat) < 5:
+        return {
+            "status": "BLOCKED",
+            "allowed_to_proceed": False,
+            "reason": "【スキップ不可（要件不足）】例外スキップには、①上長氏名、②上長役職、③具体的な判断理由（5文字以上）がすべて必要です。",
+        }
+
+    if not user_responsibility_confirmed:
+        return {
+            "status": "BLOCKED",
+            "allowed_to_proceed": False,
+            "reason": "【スキップ不可（責任所在未確認）】AI側からの無責任なスキップは行えません。利用者の自己責任においてリスクを受容する同意（user_responsibility_confirmed=True）が必要です。",
+        }
+
+    now_str = datetime.datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M:%S")
+    audit_entry = {
+        "event": "SUPERVISOR_EXCEPTION_SKIP",
+        "step_skipped": s_step,
+        "supervisor_name": s_name,
+        "supervisor_role": s_role,
+        "skip_rationale": s_rat,
+        "user_responsibility_accepted": True,
+        "timestamp": now_str,
+    }
+    ACTIVE_AUDIT_LOG.append(audit_entry)
+
+    # 次のステップを計算
+    seq = ACTIVE_STEP_SEQUENCE
+    next_step = None
+    if s_step in seq:
+        idx = seq.index(s_step)
+        if idx + 1 < len(seq):
+            next_step = seq[idx + 1]
+
+    next_msg = f"続いて『ステップ {next_step}』へ進んでください。" if next_step else "後続ステップを確認してください。"
+
+    return {
+        "status": "APPROVED_SKIP",
+        "allowed_to_proceed": True,
+        "skipped_step": s_step,
+        "next_step": next_step,
+        "supervisor": f"{s_name} ({s_role})",
+        "rationale": s_rat,
+        "audit_record": audit_entry,
+        "message": (
+            f"【上長指示による例外スキップ承認】\n"
+            f"利用者の自己責任のもと、上長判断（責任者: {s_name} / {s_role}）に基づき、"
+            f"ステップ {s_step} の例外スキップを承認・監査ログに記録しました。\n"
+            f"・判断根拠: {s_rat}\n"
+            f"・責任所在: 利用者・上長受容（監査ログ登録済）\n"
+            f"{next_msg}"
+        ),
+    }
+
+
+def guide_training_app_creation(idea: str = "", course_type: str = "custom") -> dict:
+    """【研修モード専用】受講生がHITMANの手順書やスキルを活用してオリジナルアプリ（AIエージェント）を
+    企画・作成・デプロイする体験をナビゲートする。
+    自作アプリのアイデアが思いつかない受講生には、HITMANクローン自身の作成を支援する。
+
+    Args:
+        idea: 受講生が作成したいアプリのアイデア（空欄の場合はアイデア出しやHITMAN作成コースを提案）。
+        course_type: コースタイプ（'custom': オリジナルアプリ, 'hitman': HITMAN作成コース）。
+
+    Returns:
+        開発ガイダンス、推奨構成、AntiGravity投入プロンプト案を含む辞書。
+    """
+    idea_clean = (idea or "").strip()
+    if course_type == "hitman" or not idea_clean or "思いつかない" in idea_clean or "hitman" in idea_clean.lower():
+        return {
+            "status": "success",
+            "course": "HITMAN作成コース（ペアオペレーター構築体験）",
+            "concept": "HITMAN自身のアーキテクチャ（Excel手順書パーサー、A2UIカード、客観Wチェック判定、エスカレーションゲート）を自ら構築・デプロイする王道コースです。",
+            "recommended_steps": [
+                "1. 要件定義: Excel手順書の読み込みとA2UIカード出力の設計",
+                "2. 判定エンジン: ターミナルログの客観Wチェックロジックの実装",
+                "3. エスカレ制御: 上長協議ゲートと2人体制特別モードの実装",
+                "4. デプロイ: Vertex AI / Cloud Run へのワンコマンドデプロイ体験",
+            ],
+            "prompt_for_antigravity": (
+                "あなたはAIペアオペレーターHITMANの設計・構築メンターです。"
+                "Excel手順書を読み込み、事前確認コマンドをA2UIカードで提示し、"
+                "ターミナルログを客観検証するHITMANエージェントの最小構成を作成してください。"
+            ),
+            "message": (
+                "【研修モード: HITMAN作成コースへようこそ！】\n"
+                "アイデアがまだ浮かばなくても全く問題ありません！まずはこのHITMAN（ペアオペレーター）自身を"
+                "自分の手で作成・デプロイしてみましょう。手順書パーサー、A2UI表示、客観Wチェック判定の仕組みを"
+                "体験することで、AIエージェント開発の神髄をマスターできます。"
+            ),
+        }
+
+    return {
+        "status": "success",
+        "course": "オリジナルアプリ開発コース",
+        "user_idea": idea_clean,
+        "recommended_architecture": {
+            "framework": "Google ADK (Agent Development Kit) + Python",
+            "model": "gemini-3.6-flash (Vertex AI global)",
+            "ui": "A2UI (Agent-to-UI) または FastAPI チャットフロントエンド",
+            "tools": "業務に応じた自作関数ツール（ログ解析、API連携、DB照会等）",
+        },
+        "prompt_for_antigravity": (
+            f"受講生オリジナル企画: 『{idea_clean}』\n"
+            f"上記の現場課題を解決する自律型AIエージェントを Google ADK (Python) で作成してください。"
+            f"事前確認、客観的検証ツール、A2UIカード表示を組み込み、Cloud Runへのデプロイ準備を整えてください。"
+        ),
+        "message": (
+            f"【研修モード: オリジナルアプリ企画『{idea_clean}』】\n"
+            f"素晴らしいアイデアです！この課題を解決するAIエージェントを構築していきましょう。\n"
+            f"HITMANの構造（事前確認ゲート、客観ログ検証、A2UI表示）を取り入れることで、"
+            f"現場で安全に使える実用的なツールが完成します。AntiGravityに投入するプロンプト案を生成しました。"
+        ),
     }
 
 
@@ -1063,22 +1380,28 @@ schema_manager = A2uiSchemaManager(
 a2ui_instruction = schema_manager.generate_system_prompt(
     role_description=(
         "あなたはレガシーなExcel手順書（SOP: Standard Operating Procedure）の作業をナビゲートする信頼性の高いAIペアオペレーター「HITMAN」です。"
-        "オペレーターと対話しながら、作業を1ステップずつ安全に進めます。"
-        "【重要運用ルール】"
-        "1. 手順は必ず 1-1 -> 1-2 -> 2-1 -> 2-2 -> 3-1 -> 3-2 -> 3-3 -> 3-4 -> 4-1 -> 4-2 の厳格な順序で1つずつ進めなければなりません。"
-        "直前の手順が合格（verify_step_outputでSUCCESS）していない状態で後続手順（例: 1-1未完了で3-1を要求など）を要求された場合、手順スキップは重大インシデントのリスクがあるため絶対に拒否し、『直前の手順（例: ステップ1-1）がまだ完了していません。手順書の順序を遵守してください』と案内して未完了の直前手順を提示してください。"
-        "例外的に順序を外れてよいのは、異常発生時のロールバック手順（R-1, R-2）およびエスカレーション（E-1）のみです。"
-        "2. オペレーターが『ステップ1を開始したい』などと求めたら、必ず `get_procedure_step` を呼び出してください。"
-        "3. 手順に事前確認（例: df -h 空き容量確認、事前SELECTなど）がある場合は、いきなり本番コマンドを実行させず、必ず『事前確認コマンド（例: ステップ1-1, 3-3）』のA2UIカードを提示して実行を促してください。"
-        "4. オペレーターがターミナルの実行結果ログを貼り付けたら、必ず `verify_step_output` ツールを呼び出して合否を客観判定してください。"
-        "5. DB更新手順（ステップ3-3）では、事前SELECTログと投入予定SQLを `analyze_sql_impact` ツールで突き合わせ、更新予測と依頼元要件合致を判定してください。"
-        "6. 想定外の事象やSQL不一致が発生した場合は、直ちに作業を中断し、エスカレーション対応（ステップ E-1）へ案内してください。"
-        "7. エスカレーション対応時は `evaluate_escalation_gate` を呼び出し、対応結果・GO/NOGO・判断根拠（こんきょ）が揃っていることを検証してください。根拠がない場合は作業再開を許可してはなりません。"
-        "8. GO判定で特別対応となった場合は【特別モード（2人体制）】へ移行し、作業リーダー/上長とペアでダブルチェックを行うよう案内してください（リーダー承認で進行可能です）。"
-        "9. 全手順完了時は `generate_final_report` で作業前後の結果比較、所要時間、格納成果物の最終評価報告を作成してください。"
-        "10. セッション間の長期記憶（Memory Bank）の活用: オペレーターの過去の作業履歴、習熟度、よくあるエラー傾向、または指示された特記事項をセッションをまたいで記憶・参照し、安全でパーソナライズされた運用支援を提供してください。"
-        "11. 障害対応・運用ナレッジ（RAG）の活用: オペレーターからディスク容量不足、DBロック待ち、HTTP 500エラー、または運用基準に関する質問やトラブル報告を受けた際は、直ちに `consult_sop_knowledge` ツールを呼び出して社内ナレッジベース（障害対応SOPガイド）から関連する対処法や推奨コマンドを取得し、的確に案内してください。"
-        "12. 既存手順書のインポートと自律Wチェック有識者役: オペレーターが新しい手順書（Markdown表、CSV、JSONなど）のロードを要求した場合は `import_sop_procedure` ツールを呼び出して即座に取り込んでください。あなたは受動的なチャットボットではなく、有識者として『事前確認の未完了は本番投入を拒否』『ログを客観検証しWチェック承認シールを発行』『異常時は自律的にエスカレやロールバックへ分岐』する厳格な確認者です。"
+        "現場作業者と対話し、厳格なWチェック、障害時のエスカレーション制御、および教育用研修モードを自律的に提供します。"
+        "【3つの運用モードと基本規程】"
+        "1. 【通常モード (NORMAL)】: 現場本番作業用。客観的コマンド実行ログ（rawログ）が確認できなければ1ミリも前進させてはなりません。"
+        "オペレーターが『容量は空いてたよ』『大丈夫でした』『完了した』等の口頭・自然言語の自己申告をした場合、自己申告のみでの承認は重大インシデント防止規程違反であるため絶対に承認せず、必ず `verify_step_output` を呼び出して客観的実行ログの提示を要求して差し戻してください。"
+        "2. 【エスカレ特別モード (SPECIAL_PAIR / 2人体制)】: 想定外事象・SQL不整合発生後の上長同席ペア作業モード。"
+        "エスカレモードであっても、原則としてコマンド実行結果ログの確認が必須です。"
+        "【重要禁則事項】AI側から手順スキップを提案・誘導することは絶対に禁止します。"
+        "ただし現場のやむを得ない事情でスキップする場合、利用者の責任において『上長氏名・役職』『具体的理由』『リスク受容の同意』が明文化された指示があった場合に限り、`request_supervisor_step_skip` ツールで例外スキップとして監査ログに記録してください。"
+        "3. 【研修モード (TRAINING)】: 株式会社ＡｌｔＸのAI実践研修用特別モード。"
+        "受講生がHITMANの手順書を活用しながら、現場課題を解決するオリジナルアプリ（AIエージェント・自動化ツール）を作成・デプロイする体験を熱心に伴走支援してください。"
+        "自作アプリのアイデアがまだ思いつかない受講生には、`guide_training_app_creation` を呼び出し、『HITMAN（ペアオペレーター）自身の作成・デプロイ』を体験するコースを案内してください。"
+        "受講生が自己申告を入力した際は、なぜ本番運用で客観証拠が必要なのかを教育的に解説し、指定コマンドの実行を優しく促してください。"
+        "【手順進行・運用ルール】"
+        "4. 手順は原則 1-1 -> 1-2 -> 2-1 -> 2-2 -> 3-1 -> 3-2 -> 3-3 -> 3-4 -> 4-1 -> 4-2 の厳格な順序で1つずつ進めなければなりません。"
+        "直前手順が合格していない状態での後続要求は『直前の手順が未完了です』と差し戻してください（ロールバック R-1/R-2、エスカレ E-1、上長責任スキップを除く）。"
+        "5. 手順開始時は必ず `get_procedure_step` を呼び出し、事前確認（1-1, 3-3）は本番コマンド前にA2UIカードで提示してください。"
+        "6. ログ貼り付け時は必ず `verify_step_output` を呼び出して客観検証を実施してください。"
+        "7. DB更新手順（3-3）では `analyze_sql_impact` でSQLとログの整合性を検証し、異常時は即座にエスカレーション（E-1）へ移行してください。"
+        "8. エスカレーション協議時は `evaluate_escalation_gate` でGO/NOGOと客観的判断根拠（こんきょ）を検証してください。"
+        "9. 全手順完了時は `generate_final_report` で評価報告書を生成してください。"
+        "10. 運用モードの確認・変更は `get_operation_mode` および `set_operation_mode` を使用してください。"
+        "11. 障害対応知識は `consult_sop_knowledge`、新手順書の取込は `import_sop_procedure` を使用してください。"
     ),
     workflow_description="Analyze the operator's request, query the procedure database using tools, guide them step-by-step through pre-checks, SQL analysis, escalation gates, and return structured A2UI cards.",
     ui_description=(
@@ -1151,6 +1474,10 @@ root_agent = Agent(
         generate_final_report,
         consult_sop_knowledge,
         import_sop_procedure,
+        get_operation_mode,
+        set_operation_mode,
+        request_supervisor_step_skip,
+        guide_training_app_creation,
     ],
     after_agent_callback=generate_memories_callback,
     after_model_callback=a2ui_callback,

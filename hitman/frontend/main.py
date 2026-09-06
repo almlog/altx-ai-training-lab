@@ -497,6 +497,66 @@ async def api_report_generate(req: Request):
     return JSONResponse(content=report)
 
 
+@app.get("/api/mode")
+async def api_get_mode():
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import get_operation_mode
+    return JSONResponse(content=get_operation_mode())
+
+
+@app.post("/api/mode")
+async def api_set_mode(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import set_operation_mode
+
+    body = await req.json()
+    mode = body.get("mode", "NORMAL")
+    supervisor_name = body.get("supervisor_name", "")
+    supervisor_role = body.get("supervisor_role", "")
+    res = set_operation_mode(mode, supervisor_name, supervisor_role)
+    return JSONResponse(content=res)
+
+
+@app.post("/api/supervisor/skip")
+async def api_supervisor_skip(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import request_supervisor_step_skip
+
+    body = await req.json()
+    step = body.get("step_to_skip", "")
+    name = body.get("supervisor_name", "")
+    role = body.get("supervisor_role", "")
+    rationale = body.get("skip_rationale", "")
+    confirmed = body.get("user_responsibility_confirmed", False)
+
+    res = request_supervisor_step_skip(step, name, role, rationale, confirmed)
+    return JSONResponse(content=res)
+
+
+@app.post("/api/training/guidance")
+async def api_training_guidance(req: Request):
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import guide_training_app_creation
+
+    body = await req.json()
+    idea = body.get("idea", "")
+    course_type = body.get("course_type", "custom")
+    res = guide_training_app_creation(idea, course_type)
+    return JSONResponse(content=res)
+
+
 
 # Static UI mount
 static_dir = os.path.join(os.path.dirname(__file__), "static")

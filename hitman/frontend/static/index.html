@@ -114,12 +114,33 @@
     color: #6ee7b7;
     border: 1px solid #047857;
   }
+  .mode-training {
+    background: linear-gradient(135deg, #0284c7, #059669);
+    color: #e0f2fe;
+    border: 1px solid #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  }
   .mode-special {
     background: linear-gradient(135deg, #b45309, #6d28d9);
     color: #fef08a;
     border: 1px solid #f59e0b;
     box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
     animation: specialPulse 2s infinite;
+  }
+  .mode-select-hdr {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .mode-select-hdr:hover, .mode-select-hdr:focus {
+    border-color: #38bdf8;
   }
   @keyframes specialPulse {
     0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
@@ -1014,6 +1035,11 @@
     <span style="font-size:0.7rem; color:#94a3b8; font-weight:400; margin-left:0.5rem;">© 2026 Shunpei Suzuki (AltX Inc.)</span>
   </div>
   <div class="header-actions">
+    <select id="mode-select-hdr" class="mode-select-hdr" onchange="changeOperationModeFromHdr(this.value)" title="運用モードの切り替え">
+      <option value="NORMAL">🟢 通常モード (現場Wチェック)</option>
+      <option value="TRAINING">🎓 研修モード (自作体験/HITMAN作成)</option>
+      <option value="SPECIAL_PAIR">⚠️ 特別モード (2人体制/上長スキップ)</option>
+    </select>
     <div id="mode-badge" class="mode-badge mode-normal">
       <span class="material-symbols-outlined" style="font-size:15px;" id="mode-badge-icon">check_circle</span>
       <span id="mode-badge-text">通常モード（1名体制）</span>
@@ -1210,6 +1236,9 @@
       <button class="chip" onclick="quickSend('手順書のステップ1を開始したいです')">▶ ステップ1開始</button>
       <button class="chip" onclick="quickSend('ステップ 3-3 のDB更新事前確認を実行したいです')">▶ 3-3 DB事前確認/SQL評価</button>
       <button class="chip" onclick="quickPasteLog()">📋 ログ貼り付け判定</button>
+      <button class="chip" id="chip-training-idea" style="display:none;color:#0284c7;font-weight:700;" onclick="quickSend('現場課題を解決するオリジナルAIアプリを企画・開発したいです。相談に乗ってください。')">💡 自作アプリ企画</button>
+      <button class="chip" id="chip-training-hitman" style="display:none;color:#059669;font-weight:700;" onclick="quickSend('何を作ればいいか思いつかないので、HITMAN作成コースでペアオペレーターの構築・デプロイを体験したいです。')">🛠️ HITMAN作成体験</button>
+      <button class="chip" id="chip-supervisor-skip" style="display:none;color:#d97706;font-weight:700;" onclick="openSupervisorSkipModal()">⏩ 上長責任スキップ</button>
       <button class="chip" style="color:#b45309;" onclick="openEscalationModal()">🚨 エスカレ対応ゲート</button>
       <button class="chip" style="color:#0284c7;" onclick="openReportModal()">📊 最終評価レポート</button>
       <button class="chip" style="color:#b91c1c;" onclick="quickSend('緊急ロールバック手順（R-1）を開始してください')">🚨 ロールバック</button>
@@ -1226,6 +1255,56 @@
         <span>送信</span>
       </button>
     </form>
+  </div>
+</div>
+
+<!-- Modal: Supervisor Step Skip -->
+<div id="modal-supervisor-skip" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>
+        <span class="material-symbols-outlined" style="color:#d97706;">skip_next</span>
+        <span>上長責任による例外手順スキップ指示</span>
+      </h3>
+      <button class="modal-close-btn" onclick="closeSupervisorSkipModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:0.6rem 0.8rem;color:#92400e;font-size:0.8rem;">
+        <strong>【規程と責任の明文化】</strong> 本操作は利用者の責任のもとで特定ステップを例外スキップします。AI自身からのスキップ提案は行いません。上長氏名、役職、具体的理由、およびリスク受容の同意が必須です。
+      </div>
+
+      <div class="esc-form-group">
+        <label>スキップ対象ステップ <span class="req-star">*</span></label>
+        <input type="text" id="skip-modal-step" class="esc-input" placeholder="例: 1-1, 3-2" value="1-1">
+      </div>
+
+      <div class="esc-form-group">
+        <label>上長／作業責任者 氏名 <span class="req-star">*</span></label>
+        <input type="text" id="skip-modal-name" class="esc-input" placeholder="例: 山田 太郎" value="山田 太郎">
+      </div>
+
+      <div class="esc-form-group">
+        <label>上長／責任者 役職 <span class="req-star">*</span></label>
+        <input type="text" id="skip-modal-role" class="esc-input" placeholder="例: システム運用統括部長, 運用リード" value="システム運用統括部長">
+      </div>
+
+      <div class="esc-form-group">
+        <label>スキップの業務的・技術的判断理由（具体的根拠） <span class="req-star">*</span></label>
+        <textarea id="skip-modal-rationale" class="esc-textarea" rows="2" placeholder="例: 事前の夜間メンテナンス枠で別ディスクへの容量確保・ヘルスチェックが完了しているため、本ステップの実行を省略と上長判断。"></textarea>
+      </div>
+
+      <div class="esc-form-group" style="background:#fef2f2;border:1px solid #fecaca;padding:0.6rem;border-radius:6px;">
+        <label style="display:flex;align-items:flex-start;gap:0.4rem;cursor:pointer;color:#991b1b;font-weight:600;font-size:0.8rem;">
+          <input type="checkbox" id="skip-modal-confirm" style="margin-top:2px;">
+          <span>利用者の自己責任において本手順をスキップし、監査ログに責任所在が記録されることに同意します（必須）</span>
+        </label>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem;">
+        <button class="chip" onclick="closeSupervisorSkipModal()">キャンセル</button>
+        <button class="btn-escalate-gate" style="background:#d97706;border-color:#b45309;" onclick="submitSupervisorSkip()">上長責任スキップを確定・次へ</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1934,6 +2013,14 @@ function updateModeUI() {
   const badgeIcon = document.getElementById("mode-badge-icon");
   const twoPersonBanner = document.getElementById("two-person-banner");
   const twoPersonText = document.getElementById("two-person-text");
+  const modeSelect = document.getElementById("mode-select-hdr");
+  const chipTrainingIdea = document.getElementById("chip-training-idea");
+  const chipTrainingHitman = document.getElementById("chip-training-hitman");
+  const chipSupervisorSkip = document.getElementById("chip-supervisor-skip");
+
+  if (modeSelect) {
+    modeSelect.value = appState.mode || "NORMAL";
+  }
 
   if (appState.mode === "SPECIAL_PAIR") {
     badge.className = "mode-badge mode-special";
@@ -1941,11 +2028,25 @@ function updateModeUI() {
     badgeText.textContent = `特別モード: 2人体制（ペア: ${appState.userId} / ${appState.supervisorName || "上長"}）`;
     twoPersonBanner.style.display = "flex";
     twoPersonText.textContent = `【特別モード: 2人体制（上長ペア作業中）】上長: ${appState.supervisorName || "上長"} / 作業者: ${appState.userId}。後続の全コマンド投入は相互ダブルチェックを行ってください。`;
+    if (chipTrainingIdea) chipTrainingIdea.style.display = "none";
+    if (chipTrainingHitman) chipTrainingHitman.style.display = "none";
+    if (chipSupervisorSkip) chipSupervisorSkip.style.display = "inline-flex";
+  } else if (appState.mode === "TRAINING") {
+    badge.className = "mode-badge mode-training";
+    badgeIcon.textContent = "school";
+    badgeText.textContent = "研修モード（自作体験/HITMAN作成）";
+    twoPersonBanner.style.display = "none";
+    if (chipTrainingIdea) chipTrainingIdea.style.display = "inline-flex";
+    if (chipTrainingHitman) chipTrainingHitman.style.display = "inline-flex";
+    if (chipSupervisorSkip) chipSupervisorSkip.style.display = "none";
   } else {
     badge.className = "mode-badge mode-normal";
     badgeIcon.textContent = "check_circle";
-    badgeText.textContent = "通常モード（1名体制）";
+    badgeText.textContent = "通常モード（1名体制・Wチェック）";
     twoPersonBanner.style.display = "none";
+    if (chipTrainingIdea) chipTrainingIdea.style.display = "none";
+    if (chipTrainingHitman) chipTrainingHitman.style.display = "none";
+    if (chipSupervisorSkip) chipSupervisorSkip.style.display = "none";
   }
 
   const escBanner = document.getElementById("escalation-alert-banner");
@@ -1954,9 +2055,101 @@ function updateModeUI() {
     escBanner.style.display = "flex";
     document.getElementById("esc-banner-reason").textContent = appState.escalationReason || "想定外事象または要件不一致が検出されました。";
     inputEl.placeholder = "🚨 エスカレーション対応が必要です。エスカレーションゲートから対応結果・GO/NOGO・判断根拠を入力してください…";
+    if (chipSupervisorSkip) chipSupervisorSkip.style.display = "inline-flex";
   } else {
     escBanner.style.display = "none";
-    inputEl.placeholder = "メッセージ、またはTeraTermログを貼り付けて送信…";
+    inputEl.placeholder = appState.mode === "TRAINING"
+      ? "🎓 研修モード: 質問、自作アプリの相談、または実行ログを送信…"
+      : "メッセージ、またはTeraTermログを貼り付けて送信…";
+  }
+}
+
+async function changeOperationModeFromHdr(newMode) {
+  try {
+    const res = await fetch("/api/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: newMode })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      appState.mode = data.mode;
+      updateModeUI();
+      saveState();
+      showToast(`✓ 運用モードを【${data.mode}】に変更しました`);
+      if (newMode === "TRAINING") {
+        sendMessage("【運用モード切替: 研修モード】\n受講生の実践研修モードに切り替えました。オリジナルAIアプリの企画・開発体験、またはHITMAN作成コースについてご案内できます。");
+      } else if (newMode === "SPECIAL_PAIR") {
+        sendMessage("【運用モード切替: エスカレ特別モード（2人体制）】\n上長同席の特別モードに切り替えました。全コマンド投入において相互ダブルチェックを実施してください。");
+      } else {
+        sendMessage("【運用モード切替: 通常モード】\n現場本番作業の通常モードに復帰しました。厳格な客観ログWチェックを実施します。");
+      }
+    } else {
+      alert("モード切替エラー: " + data.message);
+    }
+  } catch(e) {
+    alert("モード切替APIエラー: " + e.message);
+  }
+}
+
+function openSupervisorSkipModal() {
+  document.getElementById("skip-modal-step").value = appState.currentStep || "1-1";
+  document.getElementById("modal-supervisor-skip").classList.add("show");
+}
+
+function closeSupervisorSkipModal() {
+  document.getElementById("modal-supervisor-skip").classList.remove("show");
+}
+
+async function submitSupervisorSkip() {
+  const step = document.getElementById("skip-modal-step").value.trim();
+  const name = document.getElementById("skip-modal-name").value.trim();
+  const role = document.getElementById("skip-modal-role").value.trim();
+  const rationale = document.getElementById("skip-modal-rationale").value.trim();
+  const confirmed = document.getElementById("skip-modal-confirm").checked;
+
+  if (!step || !name || !role) {
+    alert("ステップ、上長氏名、上長役職は必須入力です。");
+    return;
+  }
+  if (!rationale || rationale.length < 5) {
+    alert("スキップの具体的な判断理由（5文字以上）を入力してください。");
+    return;
+  }
+  if (!confirmed) {
+    alert("利用者の自己責任においてリスクを受容するチェックボックスにチェックを入れてください。");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/supervisor/skip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        step_to_skip: step,
+        supervisor_name: name,
+        supervisor_role: role,
+        skip_rationale: rationale,
+        user_responsibility_confirmed: true
+      })
+    });
+    const data = await res.json();
+    if (data.status === "APPROVED_SKIP") {
+      closeSupervisorSkipModal();
+      showToast(`⏩ ステップ ${step} の上長例外スキップを承認しました`);
+      if (data.next_step) {
+        appState.currentStep = data.next_step;
+      }
+      appState.escalationActive = false;
+      renderFlowChart();
+      renderSopTable();
+      saveState();
+      sendMessage(`【上長指示による例外スキップ確定】\n責任者: ${name} (${role})\n対象: ステップ ${step}\n判断理由: ${rationale}\n利用者自己責任のもとスキップし、次ステップへ進めてください。`);
+    } else {
+      alert("スキップ拒絶: " + data.reason);
+    }
+  } catch (err) {
+    alert("スキップAPI通信エラー: " + err.message);
   }
 }
 

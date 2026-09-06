@@ -7,9 +7,13 @@ from app.agent import (
     evaluate_escalation_gate,
     generate_final_report,
     get_active_sop,
+    get_operation_mode,
     get_procedure_step,
+    guide_training_app_creation,
     import_sop_procedure,
+    request_supervisor_step_skip,
     reset_active_sop,
+    set_operation_mode,
     verify_step_output,
 )
 
@@ -313,6 +317,136 @@ def test_frontend_api_sop_endpoints():
     assert res_reset.status_code == 200
     reset_data = res_reset.json()
     assert "1" in [str(k) for k in reset_data["sop"].keys()]
+
+    # 4. GET & POST /api/mode
+    res_mode_get = client.get("/api/mode")
+    assert res_mode_get.status_code == 200
+    assert "mode" in res_mode_get.json()
+
+    res_mode_set = client.post("/api/mode", json={"mode": "TRAINING"})
+    assert res_mode_set.status_code == 200
+    assert res_mode_set.json()["mode"] == "TRAINING"
+
+    # Reset back to NORMAL
+    client.post("/api/mode", json={"mode": "NORMAL"})
+
+    # 5. POST /api/supervisor/skip
+    res_skip = client.post("/api/supervisor/skip", json={
+        "step_to_skip": "1-1",
+        "supervisor_name": "山田 太郎",
+        "supervisor_role": "統括部長",
+        "skip_rationale": "夜間検証済みのため本手順は省略と上長判断",
+        "user_responsibility_confirmed": True
+    })
+    assert res_skip.status_code == 200
+    assert res_skip.json()["status"] == "APPROVED_SKIP"
+
+    # 6. POST /api/training/guidance
+    res_guide = client.post("/api/training/guidance", json={"idea": "DB自動監査ツール"})
+    assert res_guide.status_code == 200
+    assert "オリジナルアプリ開発コース" in res_guide.json()["course"]
+
+
+def test_verify_step_output_rejects_pure_assertion():
+    """自己申告メッセージ（ログ不在）が通常モードで確実に弾かれることを検証。"""
+    set_operation_mode("NORMAL")
+    user_assertion = "容量は空いてたよ。10GB以上ある。次のステップに進もう"
+    result = verify_step_output("1-1", user_assertion)
+    assert result["verdict"] == "FAILED"
+    assert result["w_check_status"] == "REJECTED_NO_LOG"
+    assert "自己申告のみ" in result["message"]
+
+    # 他の自己申告文も確実に弾かれることを検証
+    res_done = verify_step_output("1-2", "完了しました。次へ進めてください。")
+    assert res_done["verdict"] == "FAILED"
+    assert res_done["w_check_status"] == "REJECTED_NO_LOG"
+
+
+def test_verify_step_output_training_mode_guidance():
+    """研修モードでは自己申告に対して教育的ガイダンスが返ることを検証。"""
+    set_operation_mode("TRAINING")
+    user_assertion = "大丈夫でした。問題ないです"
+    result = verify_step_output("1-1", user_assertion)
+    assert result["verdict"] == "FAILED"
+    assert result["w_check_status"] == "TRAINING_GUIDANCE"
+    assert "研修モード・教育ガイダンス" in result["message"]
+    assert "客観的な証拠" in result["message"]
+    # 通常モードに戻す
+    set_operation_mode("NORMAL")
+
+
+def test_supervisor_step_skip_tool():
+    """上長責任による手順スキップツールの挙動検証（AI自発提案禁止・責任明文化）。"""
+    # 1. 要件不足（理由なし） -> BLOCKED
+    res_fail = request_supervisor_step_skip(
+        step_to_skip="1-1",
+        supervisor_name="山田 太郎",
+        supervisor_role="運用統括部長",
+        skip_rationale="",
+        user_responsibility_confirmed=True,
+    )
+    assert res_fail["status"] == "BLOCKED"
+    assert res_fail["allowed_to_proceed"] is False
+
+    # 2. 責任受容未同意 -> BLOCKED
+    res_no_resp = request_supervisor_step_skip(
+        step_to_skip="1-1",
+        supervisor_name="山田 太郎",
+        supervisor_role="運用統括部長",
+        skip_rationale="夜間自動バッチで既に別ディスクに容量確保済みのため本確認は不要",
+        user_responsibility_confirmed=False,
+    )
+    assert res_no_resp["status"] == "BLOCKED"
+    assert res_no_resp["allowed_to_proceed"] is False
+
+    # 3. 全要件充足 -> APPROVED_SKIP
+    res_ok = request_supervisor_step_skip(
+        step_to_skip="1-1",
+        supervisor_name="山田 太郎",
+        supervisor_role="運用統括部長",
+        skip_rationale="夜間自動バッチで既に別ディスクに容量確保済みのため本確認は不要と上長判断",
+        user_responsibility_confirmed=True,
+    )
+    assert res_ok["status"] == "APPROVED_SKIP"
+    assert res_ok["allowed_to_proceed"] is True
+    assert res_ok["skipped_step"] == "1-1"
+    assert "上長指示による例外スキップ承認" in res_ok["message"]
+
+
+def test_guide_training_app_creation():
+    """研修モードでのオリジナルアプリ開発またはHITMAN作成ガイダンスの検証。"""
+    # 1. アイデアなし -> HITMAN作成コース
+    res_hitman = guide_training_app_creation("")
+    assert res_hitman["status"] == "success"
+    assert "HITMAN作成コース" in res_hitman["course"]
+    assert "Excel手順書" in res_hitman["concept"]
+
+    # 2. オリジナルアイデア -> カスタムアプリ開発コース
+    res_custom = guide_training_app_creation("社内Gitリポジトリのセキュリティ脆弱性自動監査エージェント")
+    assert res_custom["status"] == "success"
+    assert "オリジナルアプリ開発コース" in res_custom["course"]
+    assert "Google ADK" in res_custom["recommended_architecture"]["framework"]
+
+
+def test_set_and_get_operation_mode():
+    """運用モードの切り替えと情報取得の検証。"""
+    # TRAINING
+    set_operation_mode("TRAINING")
+    info = get_operation_mode()
+    assert info["mode"] == "TRAINING"
+    assert "研修モード" in info["description"]
+
+    # SPECIAL_PAIR
+    set_operation_mode("SPECIAL_PAIR", supervisor_name="鈴木 駿平", supervisor_role="運用リード")
+    info = get_operation_mode()
+    assert info["mode"] == "SPECIAL_PAIR"
+    assert info["supervisor_name"] == "鈴木 駿平"
+
+    # NORMAL
+    set_operation_mode("NORMAL")
+    info = get_operation_mode()
+    assert info["mode"] == "NORMAL"
+
 
 
 
