@@ -19,3 +19,10 @@ __pycache__/
 node_modules/
 package-lock.json
 .video_tmp/
+
+# Internal company materials & presentation slides (Excluded from public GitHub)
+internal/
+internal_docs/
+slides/
+*.marp.md
+FACILITATOR_RUNBOOK.md
