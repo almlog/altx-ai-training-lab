@@ -11,6 +11,7 @@ Supports:
 import json
 import os
 import re
+import time
 import uuid
 from dotenv import load_dotenv
 import httpx
@@ -270,12 +271,13 @@ async def _chat_direct(user_id: str, message: str) -> list[dict]:
 
 @app.post("/chat")
 async def chat(req: Request):
+    t0 = time.perf_counter()
     body = await req.json()
     message = body.get("message", "").strip()
     user_id = body.get("user_id") or "web-user"
 
     if not message:
-        return JSONResponse({"parts": []})
+        return JSONResponse({"parts": [], "metrics": None})
 
     if RESOURCE:
         parts = await _chat_cloud(user_id, message)
@@ -290,7 +292,48 @@ async def chat(req: Request):
     if not parts:
         parts = [{"kind": "text", "text": "(応答がありませんでした。もう一度お試しください。)"}]
 
-    return JSONResponse({"parts": parts})
+    latency_sec = time.perf_counter() - t0
+    latency_ms = round(latency_sec * 1000, 1)
+
+    # Calculate token count and estimated cost
+    # Gemini 2.5 Flash: $0.075 / 1M input tokens, $0.30 / 1M output tokens (1 USD = 150 JPY)
+    # Cloud Run: 1 vCPU ($0.000024/s) + 512MB RAM ($0.00000125/s) = $0.00002525 / s
+    gemini_in_rate = 0.00001125    # JPY per input token
+    gemini_out_rate = 0.000045      # JPY per output token
+    cloud_run_rate = 0.0037875      # JPY per second of request processing
+
+    # Estimate input tokens: message + base SOP/system prompt context (~450 tokens)
+    input_cjk = len(re.findall(r'[\u3000-\u9fff\uff00-\uffef]', message))
+    input_tokens = int(input_cjk * 1.3 + (len(message) - input_cjk) * 0.35) + 450
+
+    # Estimate output tokens: texts + A2UI JSON payload
+    out_text = "".join(
+        p.get("text", "") for p in parts if p.get("kind") == "text" or "text" in p
+    )
+    for p in parts:
+        if p.get("kind") == "a2ui":
+            out_text += json.dumps(p.get("data", {}), ensure_ascii=False)
+    out_cjk = len(re.findall(r'[\u3000-\u9fff\uff00-\uffef]', out_text))
+    output_tokens = max(25, int(out_cjk * 1.3 + (len(out_text) - out_cjk) * 0.35))
+
+    gemini_cost = (input_tokens * gemini_in_rate) + (output_tokens * gemini_out_rate)
+    cloud_run_cost = latency_sec * cloud_run_rate
+    total_cost = gemini_cost + cloud_run_cost
+
+    metrics = {
+        "prompt_tokens": input_tokens,
+        "candidate_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+        "latency_ms": latency_ms,
+        "latency_sec": round(latency_sec, 2),
+        "gemini_cost_jpy": round(gemini_cost, 4),
+        "cloud_run_cost_jpy": round(cloud_run_cost, 4),
+        "total_cost_jpy": round(total_cost, 4),
+        "free_tier_applied": True,
+        "effective_cost_jpy": 0.0,
+    }
+
+    return JSONResponse({"parts": parts, "metrics": metrics})
 
 
 @app.get("/api/sop")

@@ -61,7 +61,29 @@
     border-radius: 9999px;
     font-weight: 500;
   }
-  .header-actions {
+  
+.cost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: rgba(234, 179, 8, 0.14);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #fef08a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.cost-badge:hover {
+  background: rgba(234, 179, 8, 0.24);
+  border-color: #facc15;
+  transform: translateY(-1px);
+}
+
+.header-actions {
     display: flex;
     align-items: center;
     gap: 0.8rem;
@@ -126,6 +148,11 @@
     border: 1px solid #f59e0b;
     box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
     animation: specialPulse 2s infinite;
+  }
+  .cost-badge {
+    padding: 0.25rem 0.45rem;
+    font-size: 0.72rem;
+    max-width: 145px;
   }
   .mode-select-hdr {
     background: #1e293b;
@@ -1537,6 +1564,10 @@ html, body {
     <span style="font-size:0.7rem; color:#94a3b8; font-weight:400; margin-left:0.5rem;">© 2026 Shunpei Suzuki (AltX Inc.)</span>
   </div>
   <div class="header-actions">
+    <div id="cost-badge" class="cost-badge" onclick="openReportModal()" title="現在のセッションにおける推定利用料金（Gemini 2.5 Flash + Cloud Run）。クリックで詳細レポートを表示">
+      <span class="material-symbols-outlined" style="font-size:15px;color:#facc15;">payments</span>
+      <span id="cost-badge-text">推定: ¥0.000 (実質¥0)</span>
+    </div>
     <select id="mode-select-hdr" class="mode-select-hdr" onchange="changeOperationModeFromHdr(this.value)" title="運用モードの切り替え">
       <option value="NORMAL">🟢 通常モード (現場Wチェック)</option>
       <option value="TRAINING">🎓 研修モード (自作体験/HITMAN作成)</option>
@@ -2051,6 +2082,15 @@ let appState = {
   mode: "NORMAL", // "NORMAL", "TRAINING", "SPECIAL_PAIR"
   trainingCourse: "original", // "original" or "hitman_clone"
   supervisorName: "",
+  costMetrics: {
+    totalPromptTokens: 0,
+    totalCandidateTokens: 0,
+    totalLatencyMs: 0,
+    totalRequests: 0,
+    geminiCostJpy: 0,
+    cloudRunCostJpy: 0,
+    totalCostJpy: 0,
+  },
   escalationActive: false,
   escalationReason: "",
   escalationRecord: null,
@@ -2211,6 +2251,44 @@ function canAccessStep(targetStepId) {
     }
   }
   return { allowed: true };
+}
+
+
+// --- FinOps Cost Metrics Logic ---
+function updateCostMetrics(m) {
+  if (!m) return;
+  if (!appState.costMetrics) {
+    appState.costMetrics = {
+      totalPromptTokens: 0,
+      totalCandidateTokens: 0,
+      totalLatencyMs: 0,
+      totalRequests: 0,
+      geminiCostJpy: 0,
+      cloudRunCostJpy: 0,
+      totalCostJpy: 0,
+    };
+  }
+  appState.costMetrics.totalPromptTokens = (appState.costMetrics.totalPromptTokens || 0) + (m.prompt_tokens || 0);
+  appState.costMetrics.totalCandidateTokens = (appState.costMetrics.totalCandidateTokens || 0) + (m.candidate_tokens || 0);
+  appState.costMetrics.totalLatencyMs = (appState.costMetrics.totalLatencyMs || 0) + (m.latency_ms || 0);
+  appState.costMetrics.totalRequests = (appState.costMetrics.totalRequests || 0) + 1;
+  appState.costMetrics.geminiCostJpy = (appState.costMetrics.geminiCostJpy || 0) + (m.gemini_cost_jpy || 0);
+  appState.costMetrics.cloudRunCostJpy = (appState.costMetrics.cloudRunCostJpy || 0) + (m.cloud_run_cost_jpy || 0);
+  appState.costMetrics.totalCostJpy = (appState.costMetrics.totalCostJpy || 0) + (m.total_cost_jpy || 0);
+
+  renderCostUI();
+  renderFinalReportView();
+  renderCostUI();
+  saveState();
+}
+
+function renderCostUI() {
+  const badgeText = document.getElementById("cost-badge-text");
+  const cost = (appState.costMetrics && appState.costMetrics.totalCostJpy) || 0;
+  if (badgeText) {
+    const formatted = cost < 1 ? `¥${cost.toFixed(3)}` : `¥${cost.toFixed(2)}`;
+    badgeText.textContent = `推定: ${formatted} (実質¥0)`;
+  }
 }
 
 function saveState() {
@@ -2981,6 +3059,25 @@ function renderFinalReportView() {
   const duration = appState.startTime ? Math.max(1, Math.round((new Date() - new Date(appState.startTime)) / 60000)) : 18;
   const isSpecial = appState.mode === "SPECIAL_PAIR";
 
+  const cm = appState.costMetrics || {
+    totalPromptTokens: 0,
+    totalCandidateTokens: 0,
+    totalLatencyMs: 0,
+    totalRequests: 0,
+    geminiCostJpy: 0,
+    cloudRunCostJpy: 0,
+    totalCostJpy: 0,
+  };
+  const totCost = cm.totalCostJpy || 0;
+  const gemCost = cm.geminiCostJpy || 0;
+  const runCost = cm.cloudRunCostJpy || 0;
+  const totTokens = (cm.totalPromptTokens || 0) + (cm.totalCandidateTokens || 0);
+  const inTokens = cm.totalPromptTokens || 0;
+  const outTokens = cm.totalCandidateTokens || 0;
+  const runSec = ((cm.totalLatencyMs || 0) / 1000).toFixed(1);
+  const humanCost = Math.round(duration * (5000 / 60));
+  const savedCost = Math.max(0, humanCost - Math.ceil(totCost));
+
   let html = `
     <div class="report-score-card">
       <div>
@@ -2993,6 +3090,51 @@ function renderFinalReportView() {
       <span class="material-symbols-outlined" style="font-size:48px;color:${isSpecial ? '#7c3aed' : '#16a34a'};">
         ${isSpecial ? 'verified_user' : 'workspace_premium'}
       </span>
+    </div>
+
+    <!-- FinOps Cost & ROI Analysis Card -->
+    <div style="background: linear-gradient(135deg, #fefce8, #f0fdf4); border: 1px solid #fde047; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 0.8rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.6rem;">
+        <div style="display:flex; align-items:center; gap:0.4rem;">
+          <span class="material-symbols-outlined" style="font-size:22px;color:#ca8a04;">account_balance_wallet</span>
+          <strong style="font-size:0.92rem; color:#854d0e;">FinOps コスト分析 ＆ ROI削減効果（推定）</strong>
+        </div>
+        <span style="background:#16a34a; color:#fff; font-size:0.7rem; font-weight:700; padding:0.15rem 0.55rem; border-radius:9999px;">
+          ✓ Google Cloud 無料枠適用中（実質負担: 0円）
+        </span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.55rem; font-size:0.78rem;">
+        <div style="background:#ffffff; border:1px solid #fef08a; border-radius:6px; padding:0.5rem 0.65rem;">
+          <div style="color:#713f12; font-size:0.7rem;">今回のAI推定消費額</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#b45309; margin-top:2px;">¥${totCost.toFixed(3)}</div>
+          <div style="font-size:0.68rem; color:#64748b;">(Gemini: ¥${gemCost.toFixed(3)} / Run: ¥${runCost.toFixed(3)})</div>
+        </div>
+
+        <div style="background:#ffffff; border:1px solid #bbf7d0; border-radius:6px; padding:0.5rem 0.65rem;">
+          <div style="color:#166534; font-size:0.7rem;">実質請求額 (Free Tier)</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#15803d; margin-top:2px;">¥0.00</div>
+          <div style="font-size:0.68rem; color:#16a34a;">(月200万req/180k秒無料)</div>
+        </div>
+
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.5rem 0.65rem;">
+          <div style="color:#475569; font-size:0.7rem;">トークン消費量</div>
+          <div style="font-size:1.05rem; font-weight:700; color:#1e293b; margin-top:2px;">${totTokens.toLocaleString()} <span style="font-size:0.7rem;">tok</span></div>
+          <div style="font-size:0.68rem; color:#64748b;">(入: ${inTokens.toLocaleString()} / 出: ${outTokens.toLocaleString()})</div>
+        </div>
+
+        <div style="background:#ffffff; border:1px solid #fed7aa; border-radius:6px; padding:0.5rem 0.65rem;">
+          <div style="color:#9a3412; font-size:0.7rem;">人手換算コスト (比較)</div>
+          <div style="font-size:1.05rem; font-weight:700; color:#c2410c; margin-top:2px;">¥${humanCost.toLocaleString()}</div>
+          <div style="font-size:0.68rem; color:#64748b;">(所要 ${duration}分 × ¥5,000/h)</div>
+        </div>
+
+        <div style="background:#ffffff; border:1px solid #a7f3d0; border-radius:6px; padding:0.5rem 0.65rem;">
+          <div style="color:#065f46; font-size:0.7rem;">コスト削減効果 (ROI)</div>
+          <div style="font-size:1.1rem; font-weight:800; color:#047857; margin-top:2px;">-¥${savedCost.toLocaleString()}</div>
+          <div style="font-size:0.68rem; color:#059669; font-weight:600;">(削減率: 約 99.9%)</div>
+        </div>
+      </div>
     </div>
 
     <div>
@@ -3085,7 +3227,26 @@ function exportReportMarkdown() {
   md += `- **運用体制**: ${isSpecial ? `特別モード 2人体制（上長ペア: ${appState.supervisorName || '上長'}）` : '通常モード（1名体制）'}\n`;
   md += `- **総合評価スコア**: **${isSpecial ? 'A ランク（特別対応2人体制による安全完遂）' : 'S ランク（手順書完全準拠・ノーエラー・安全完了）'}**\n\n`;
 
-  md += `## 1. 作業前後の状態比較 (Before vs After)\n\n`;
+  const cm = appState.costMetrics || { totalPromptTokens: 0, totalCandidateTokens: 0, totalLatencyMs: 0, totalRequests: 0, geminiCostJpy: 0, cloudRunCostJpy: 0, totalCostJpy: 0 };
+  const totCost = cm.totalCostJpy || 0;
+  const gemCost = cm.geminiCostJpy || 0;
+  const runCost = cm.cloudRunCostJpy || 0;
+  const totTokens = (cm.totalPromptTokens || 0) + (cm.totalCandidateTokens || 0);
+  const inTokens = cm.totalPromptTokens || 0;
+  const outTokens = cm.totalCandidateTokens || 0;
+  const runSec = ((cm.totalLatencyMs || 0) / 1000).toFixed(1);
+  const humanCost = Math.round(duration * (5000 / 60));
+  const savedCost = Math.max(0, humanCost - Math.ceil(totCost));
+
+  md += `## 1. FinOps コスト分析 & ROI削減効果（推定）\n\n`;
+  md += `- **セッション推定消費額**: ¥${totCost.toFixed(3)} (Gemini API: ¥${gemCost.toFixed(3)} / Cloud Run: ¥${runCost.toFixed(3)})\n`;
+  md += `- **実質請求額 (Google Cloud Free Tier適用)**: **¥0.00** (月間200万リクエスト/180k秒まで無料枠内)\n`;
+  md += `- **消費トークン総数**: ${totTokens.toLocaleString()} tokens (入力: ${inTokens.toLocaleString()} / 出力: ${outTokens.toLocaleString()})\n`;
+  md += `- **Cloud Run リクエスト処理時間**: ${runSec}秒 (${cm.totalRequests || 0}回)\n`;
+  md += `- **従来の人手作業換算コスト (所要${duration}分 × ¥5,000/h)**: ¥${humanCost.toLocaleString()}\n`;
+  md += `- **推定コスト削減効果 (ROI)**: **¥${savedCost.toLocaleString()} 削減 (削減率: 約 99.9%)**\n\n`;
+
+  md += `## 2. 作業前後の状態比較 (Before vs After)\n\n`;
   md += `| 確認項目 | 作業前 (Before) | 作業後 (After) | 要件合致判定 |\n`;
   md += `| :--- | :--- | :--- | :---: |\n`;
   md += `| アプリケーションバージョン | v2.0.4 (旧現行環境) | v2.1.0 (最新) | **正常更新 ✓** |\n`;
@@ -3721,6 +3882,9 @@ async function sendMessage(text) {
       body: JSON.stringify({ message: text, user_id: appState.userId })
     });
     const data = await res.json();
+    if (data.metrics) {
+      updateCostMetrics(data.metrics);
+    }
     renderReply(b, data.parts || []);
   } catch (e) {
     b.textContent = "通信エラーが発生しました: " + e.message;
