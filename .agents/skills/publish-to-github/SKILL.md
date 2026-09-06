@@ -78,7 +78,7 @@ run (answering yes sets up the git credential helper so the later push works).
 Relay both to the participant and tell them:
 
 > Open **github.com/login/device** on any device, sign in with **your personal
-> GitHub account** (not the Qwiklabs lab account), and enter this code: `XXXX-XXXX`.
+> GitHub account**, and enter this code: `XXXX-XXXX`.
 
 The command **blocks while polling**, so allow a generous timeout and have them
 authorize promptly. Confirm success with `gh auth status` (it shows the logged-in

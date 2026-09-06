@@ -37,13 +37,12 @@ When the user asks to verify their setup (or you're kicking off the lab), run
 
 ```
 Setup check:
-✅ Antigravity signed in as <lab account>
-✅ Project set to <qwiklabs project id>
-✅ gcloud auth + ADC present
-✅ Vertex AI / aiplatform API enabled
-✅ roles/aiplatform.user granted
+✅ Antigravity signed in with active Google account
+✅ Project or API Key set (GOOGLE_CLOUD_PROJECT or GEMINI_API_KEY)
+✅ gcloud auth + ADC present (or API Key configured)
+✅ Vertex AI / AI Studio API enabled
+✅ roles/aiplatform.user granted (if using GCP project)
 ✅ agents-cli skills loaded in AGY
-✅ URL-open interceptors installed as files (xdg-open + shim; Chrome launches from Antigravity)
 You're ready to start. ✅
 ```
 
@@ -54,45 +53,31 @@ deploy/frontend/sandbox symptoms during preflight — those come up later.
 
 These are the usual culprits. Check all of them before deep-diving.
 
-**0. Is the user signed into Antigravity with the RIGHT account?** A very common
-trap: signing into Antigravity with a personal **Google login** (e.g. a
-`@gmail.com` or `@google.com` account) instead of the **GCP / Qwiklabs lab
-credentials**. Everything *looks* fine, but calls to the project fail with
-permission errors because AGY is acting as the wrong identity.
-
-- Ask the user which account they used to sign into Antigravity, and confirm it's
-  the **Qwiklabs lab account**, not their personal Google account.
-- Cross-check the active gcloud account matches the lab account:
+**0. Is the user signed in with their individual Google account / API key?**
+In AltX training, participants use their **individual Google account** and their own paid API key (`GEMINI_API_KEY` via Google AI Studio) or personal GCP Project (Vertex AI Express Mode).
+- Confirm the participant has set their `GEMINI_API_KEY` or authenticated via `gcloud`:
   ```bash
-  gcloud auth list        # the ACTIVE (*) account should be the lab account
+  # If using API key:
+  echo $GEMINI_API_KEY
+  # If using Google Cloud project:
+  gcloud auth list        # the ACTIVE (*) account should be the participant's account
   ```
-- If AGY is signed in with the wrong account, have the user sign out of
-  Antigravity and sign back in using the GCP/lab login flow (per the lab's setup
-  instructions), then re-run the preflight.
+- If neither is configured, guide the participant to issue their personal API key from Google AI Studio / Vertex AI Express Mode as detailed in `TRAINING_GUIDE.md`.
 
-**1. Is the right project set?** Cloud Shell / AGY can silently default to the
-wrong project (e.g. `cloudshell-gca`), which makes enable/deploy commands fail.
+**1. Is the GCP project or API key set?**
+When deploying to Cloud Run or using Vertex AI, verify that the project ID is pinned:
 
 ```bash
 gcloud config get-value project          # what's active right now?
 echo "$GOOGLE_CLOUD_PROJECT"             # what the env thinks it is
 ```
 
-A correctly-set Qwiklabs project ID **contains the string `qwiklabs`** (e.g.
-`qwiklabs-gcp-01-abc123def456`). If the active project doesn't contain
-`qwiklabs`, it's almost certainly the wrong project — treat that as a red flag.
-
-If either is wrong, empty, or missing `qwiklabs`, **ask the user for their
-Qwiklabs Project ID** (from the lab panel) and pin it for them by running:
-
+If using a GCP project and it is not set:
 ```bash
-export GOOGLE_CLOUD_PROJECT=<their qwiklabs project id>
+export GOOGLE_CLOUD_PROJECT=<participant's project id>
 gcloud config set project "$GOOGLE_CLOUD_PROJECT"
 ```
 
-Also confirm the project is pinned inside AGY's own settings so it can't switch
-mid-run. During preflight, always pin the project this way — don't assume it's
-already set.
 
 **2. Has the user authenticated?** Two separate logins are required — a missing
 Application Default Credentials (ADC) login is the #1 cause of 403s from code.
