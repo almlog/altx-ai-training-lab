@@ -1,128 +1,58 @@
 ---
 name: pick-your-agent-project
-description: Interactively help a workshop participant decide on and design what agent to build. Use when the user is choosing a project, brainstorming an agent idea, says "I don't know what to build" or "what should I make", OR asks to design/plan/"help me design"/"help me make"/"help me build" a specific agent idea (e.g. "help me design a travel planner agent", "help me make a recipe assistant", "design my agentic application") BEFORE any code is scaffolded — this is the planning/brief step, not implementation. Also use when they want to check whether their idea will actually exercise the workshop's Google tools (memory/sessions, function tools, storage + A2UI, image generation, code sandbox, evaluation). Guides a domain choice and a tool-coverage gut-check, then writes a short project brief. Don't use for implementing or coding the agent itself (that comes after the brief).
+description: >-
+  株式会社ＡｌｔＸ（AltX Inc.）の社内AI実践研修において、受講生が「自分自身の現場課題を解決する思い思いのオリジナルAIエージェントやツール」を企画・設計するためのブレインストーミング支援スキル。受講生が「何を作ればいいかわからない」「こんなツールを作りたいがどう設計すべきか」と相談した際に発動し、ツールの役割、メモリ（長期記憶）、関数ツール、A2UI（リッチカード表示）、RAG（ナレッジ検索）の活用度を対話形式で棚卸しして、短時間で実装可能な要件定義（Project Brief）を作成する。
 ---
 
-# Pick your agent project
+# 思い思いのAIツール企画支援（Pick Your Agent Project）
 
-Help a workshop participant choose *what* agent to build for the rest of the lab.
-Your job is to run a short, interactive brainstorm (aim for 5-10 minutes of
-back-and-forth), land on a concrete idea, sanity-check that it will exercise the
-Google tools the workshop teaches, and hand them a short **project brief** they
-can build against.
+受講生が自社業務や現場課題に合わせて「どんなオリジナルAIエージェントを作るか」を対話形式（5〜10分程度）でブレインストーミングし、具体的な設計書（Project Brief）に落とし込むためのファシリテーション・スキルです。
 
-This is a *facilitation* task, not a build task. Do NOT write agent code, scaffold
-a project, or install anything here. Just help them decide.
+> [!NOTE]
+> ここではコードの自動生成や環境構築は行いません。受講生自身の「作りたい！」という意欲とアイデアを引き出し、要件をクリアに整理することがゴールです。
 
-## The one idea to convey: the tools define the shape
+## 1. 企画の指針：Google エージェント技術で実現できること
 
-The scariest version of "what should I build?" is a blank page. It isn't blank.
-The tools this workshop teaches implicitly define the *shape* of a good project.
-Reverse-engineer from the tools and the design gets easy:
+「何を作ればいいか」の白紙状態から始める必要はありません。本研修で学んだ各種エージェント機能から逆算することで、強力で実用的なツールのアイデアが自然と生まれます：
 
-| The tool they'll learn | ...means the agent should have |
-| --- | --- |
-| Sessions & Memory | something worth **remembering** about the user (preferences, history) |
-| Function tools | something real it can **do or look up**, not just chat |
-| Storage + A2UI | a **collection/catalog** of things that render nicely as cards/tables |
-| Image or Music generation | a domain where **generating a visual or sound** is useful |
-| Code sandbox | an occasional need to **compute** something |
-| Evaluation | a **definable "good"** — you can say what a right answer looks like |
+| 活用する技術要素 | エージェントに備わる能力 | アイデアの具体例 |
+|---|---|---|
+| **Sessions & Memory（長期記憶）** | ユーザーの好みや前回の作業履歴を**記憶・蓄積**する | オペレーターごとの熟練度記憶、ユーザーの過去の問い合わせ履歴 |
+| **Function Tools（関数ツール）** | 単なるチャットを超えて、外部APIやDBを**実際に操作・検索**する | SQL発行、サーバーヘルスチェック、チケット起票、社内API呼び出し |
+| **Storage + A2UI（リッチ表示）** | 検索結果やデータを**カードやテーブル形式で美しく可視化**する | カタログ一覧表示、障害対応手順カード、比較表 |
+| **RAG Engine（障害・規程検索）** | 社内マニュアルやPDFドキュメントを**高精度に参照・根拠付け**する | 社内規程FAQ、システムトラブルシューティングガイド検索 |
+| **Code Sandbox / 計算** | 複雑な数値計算やデータ変換を**安全にコード実行**して算出する | 請求金額試算、ログデータの正規表現抽出、メトリクス集計 |
+| **Evaluation（品質評価）** | 出力結果が要件に合致しているかを**客観的ポリシーで採点・監査**する | コードレビューの品質スコアリング、カスタマー対応品質チェック |
 
-So the archetype is: *a stateful conversational agent with a catalog of things it
-can show you, act on, and generate visuals for.* (That's why the sample
-"marketplace / greenhouse" agent was chosen — it hits every tool naturally.)
+受講生が取り組むテーマは自由です。自身の担当業務で「ここを自動化したい」「こんなアシスタントが隣にいたら助かる」という身近な課題を推奨してください。
 
-The participant is NOT limited to a marketplace. Any domain works as long as it
-clears the minimum bar below. Encourage a domain they actually care about — looser
-guardrails, more fun, more motivation.
+## 2. アイデアの実現性チェック（5つの問い）
 
-## The tool-coverage gut-check
+受講生のアイデアに対して、以下の問いを投げかけて要件を具体化します：
 
-Walk them through these five questions about their idea. Frame them as prompts,
-not a test:
+1. **記憶（Memory）**: セッションを跨いで、ユーザーについて何を記憶しておくと便利ですか？
+2. **ツール（Tools）**: チャット以外に、実際に実行または取得してほしいアクションは何ですか？
+3. **データ表示（Catalog/A2UI）**: カードや表で一覧表示したいデータや情報は何ですか？
+4. **ナレッジ（RAG）**: 回答の根拠として参照させたい社内ドキュメントやマニュアルはありますか？
+5. **判定・計算（Compute/Eval）**: 自動で判定・計算・チェックしてほしいルールは何ですか？
 
-1. **Memory** — What does it remember about *you* between turns/sessions?
-2. **Tools** — What can it actually *do* or *fetch* (a real action or lookup)?
-3. **Catalog** — What collection of things does it have? (renders great as cards/tables)
-4. **Visuals** — What image could it generate for you?
-5. **Compute** — When might it need to calculate or run code?
+### 合格基準（最低限満たすべきコア）
+- **「#1 記憶」** または **「#2 ツール実行」** のどちらか1つ以上が明確であること。
+- これらがない単なるおしゃべりボットではなく、「自律的に仕事をするエージェント」として成立させます。
 
-**Minimum bar (must clear to be a good project):** solid answers to **#1 and #2**.
-Those are the core rails everyone builds. If an idea can't say what it remembers
-or what it *does*, it's a chatbot, not an agent — nudge them to reshape it.
+## 3. 成果物：Project Brief（企画要件書）の出力
 
-**Stretch coverage (nice to have):** #3, #4, #5. Aim for at least two of these to
-be plausible so they have a rich "stretch menu" for the hackathon half. If their
-idea only clears the minimum, that's fine — just tell them which optional tools
-will be a natural fit later and which won't.
+ブレインストーミングがまとまったら、受講生に以下のフォーマットで **Project Brief** を提示します：
 
-## How to run the brainstorm
-
-Ask a few questions at a time and adapt — don't dump the whole checklist at once.
-
-1. **Seed a domain.** Ask what they're into (a hobby, a job pain, a game, a
-   domain they know well). If they're stuck, offer the menu below as inspiration.
-2. **Shape it into the archetype.** Restate their idea as "a conversational agent
-   that helps someone [do X] with a collection of [Y]." Get them to a one-liner.
-3. **Run the gut-check.** Go through the five questions. Fill in answers together.
-4. **Check the minimum bar.** Confirm #1 and #2 are solid. If not, tweak the idea
-   (usually: give it a real action, or something to remember) rather than
-   discarding it.
-5. **Map the stretch menu.** Tell them which optional tools (A2UI, image gen,
-   sandbox, storage) fit their domain — this is what they'll reach for after the
-   core rails are done.
-6. **Write the spec file.** Save the brief as `project_brief.md` in the workspace
-   (format below) — the build step points `agents-cli` at this file.
-
-Keep them moving. Perfect is the enemy of started — if they have a viable idea
-that clears the bar, lock it in and let them refine while building.
-
-## Domain menu (inspiration, not a menu to pick from exactly)
-
-Offer these only if they're stuck. Each is known to exercise the tools well:
-
-- Travel concierge (remembers your prefs; looks up/plans trips; itinerary cards)
-- Personal chef / recipe agent (dietary memory; recipe lookup; dish images)
-- Fantasy character or party builder (remembers your party; stat lookups; portraits)
-- Real-estate / apartment finder (budget & prefs memory; listing search; listing cards)
-- Collector game, Pokemon-style (your collection; catch/trade actions; creature art)
-- D&D dungeon master (campaign memory; dice/rules; scene images)
-- Workout / gear coach (goals memory; plan lookup; progress calc in sandbox)
-- Plant-care / greenhouse shop (the sample — care history; inventory; plant images)
-
-## Output: write the spec file
-
-When the brief is filled in, **write it to a file named `project_brief.md`** in the
-workspace (don't just print it to chat). The build step points `agents-cli` at
-this file, so it's the handoff between deciding and building. Use this format:
-
-```
-# My agent: <name>
-One-liner: A conversational agent that helps <who> <do what> with a catalog of <what>.
-
-Tool coverage:
-- Memory: <what it remembers>
-- Tools: <the real action(s)/lookup(s)>
-- Catalog/UI: <collection to render as cards/tables, or "n/a">
-- Image gen: <what visual, or "n/a">
-- Sandbox: <what computation, or "n/a">
-
-Core rails (everyone): memory, tools, eval, deploy, frontend
-My stretch menu (pick later): <the optional tools that fit>
-First eval question: <one example of a "good" response for this agent>
+```markdown
+# [ツール名]: Project Brief
+- **開発者**: [受講生氏名]
+- **解決する課題**: [現場のどんな困りごとを解決するか]
+- **コア機能**:
+  1. [主要なツールや能力]
+  2. [A2UIやRAGによる表示・検索]
+- **使用モデル**: Gemini 3.6 Flash / Vertex AI
+- **目指す成果物**: Cloud Run 上で動作する Web エージェント
 ```
 
-The "first eval question" plants the evaluation mindset early — defining "good"
-is the hardest, most valuable part of the lab.
-
-## After you write the brief: STOP
-
-Writing `project_brief.md` is the end of this skill. Do **not** build, scaffold,
-install, or write any agent code — and do **not** *offer or ask* to ("want me to
-build it now?", "shall I implement this?", "ready to scaffold?"). Offering to
-build is still going off-script: the lab has the participant build the agent
-incrementally in the steps that follow, and jumping ahead defeats the point.
-
-End your turn by telling them the brief is saved and to continue with the next
-step of the lab (they can edit `project_brief.md` first if they'd like). Then stop.
+この Brief が完成したら、受講生はアンチグラビティと共にコーディング・デプロイの実装フェーズ（マイルストーン 7〜9）へと進みます。

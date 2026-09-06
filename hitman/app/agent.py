@@ -28,7 +28,7 @@ from google.genai import types
 
 from app.a2ui_utils import a2ui_callback
 
-MODEL = "gemini-3.7-flash"
+MODEL = "gemini-3.6-flash"
 
 # 手順書の正規実行順序（手順スキップ絶対禁止の定義）
 STEP_SEQUENCE = [
@@ -1106,19 +1106,19 @@ from google.genai import Client
 
 _api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
 _project = os.environ.get("GOOGLE_CLOUD_PROJECT", "1070367799384")
-_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 _use_vertex = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "true").lower() == "true" or (_api_key and _api_key.startswith("AQ."))
 
 if _use_vertex and _api_key:
     _client = Client(vertexai=True, api_key=_api_key, project=_project, location=_location)
-    MODEL = "gemini-2.5-flash"
+    MODEL = "gemini-3.6-flash"
     _model_instance = Gemini(
         model=MODEL,
         client=_client,
         retry_options=types.HttpRetryOptions(attempts=3),
     )
 else:
-    MODEL = "gemini-2.5-flash"
+    MODEL = "gemini-3.6-flash"
     _model_instance = Gemini(
         model=MODEL,
         retry_options=types.HttpRetryOptions(attempts=3),

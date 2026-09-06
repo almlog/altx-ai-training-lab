@@ -1,89 +1,104 @@
-# AltX 社内AIアプリ開発実践研修カリキュラム
-## 〜 Google ADK & Gemini で創るエンタープライズAIエージェント・コックピット 〜
+# AltX 社内AI実践研修カリキュラム
+## 〜 HITMAN（AIペアオペレーター）とアンチグラビティで拓く、自律型AIエージェント開発・デプロイ実践 〜
 
 **開発・監修**: 株式会社ＡｌｔＸ（AltX Inc.） 鈴木 駿平 (Shunpei Suzuki) <suzuki.shunpei@altx.co.jp>  
 **著作権**: Copyright (c) 2026 Shunpei Suzuki (AltX Inc.) All Rights Reserved.  
 **プロジェクト名**: `altx-ai-training-lab`  
-**リファレンス**: Google Cloud「Build with Gemini World Tour · Track 3」のセッションを参考に社内研修用に再構築
+**HITMAN 稼働エンジン**: `gemini-3.6-flash` (Vertex AI / Global)  
+**公式プラットフォーム URL**: [https://altx-hitman-cockpit-1070367799384.us-central1.run.app](https://altx-hitman-cockpit-1070367799384.us-central1.run.app)
 
 ---
 
-## 1. 研修の目的と全体概要
+## 1. 研修の目的と受講生のゴール
 
-本研修は、Google の最新エージェントフレームワークである **ADK (Agent Development Kit)** と **Gemini 2.5 Flash** を駆使し、レガシーな運用現場（Excel手順書、TeraTermログ確認、本番DB更新など）の課題を根本解決する「AIペアオペレーター・コックピット（HITMAN）」の設計・開発・テスト・クラウド本番デプロイまでを一気通貫で体験する実践研修です。
+本研修の目的は、**「全員が同じHITMANをゼロから作ること」ではありません**。
 
-受講者は各自の個人 Google アカウントを用いて独立したクラウド環境を構築し、プロトタイプから本番運用レベルのコンテナデプロイまでを自らの手で完成させます。
+受講生は、鈴木 駿平（AltX Inc.）が設計・開発した公式AIペアオペレーター**「HITMAN」**をオペレーション基盤として活用し、HITMANから提供される検証済み手順・プロンプトを**「アンチグラビティ（Antigravity）」**に投入します。
 
-### システムアーキテクチャ
+アンチグラビティは裏側に配備された高度な**Skills（AIガバナンス研修 M0〜M5、開発・デプロイスキル）**を自律的に活用し、受講者を強力に伴走します。受講生はセキュリティやガバナンスの勘所を実体験した上で、**「自分自身の現場課題を解決する、思い思いのオリジナルAIエージェントやツール」**を企画・開発し、Cloud Runへの本番デプロイまでを達成します。
+
 ```text
-[受講者 / オペレーターのブラウザ]
-             │
-             ▼ (HTTPS / Cloud Run)
 ┌─────────────────────────────────────────────────────────────┐
-│ HITMAN Ops Assistant Cockpit (FastAPI Proxy + 2-Pane UI)   │
-│  ├─ 左ペイン: リアルタイムAIチャット & A2UI リッチカード     │
-│  └─ 右ペイン: 手順進捗バー、SQL影響評価、エスカレゲート      │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼ (ADK / In-Process & Agent Engine)
+│ 【Step 1】HITMAN Cockpit（Cloud Run稼働中 / gemini-3.6-flash）│
+│  ・受講生はブラウザからアクセスする（開発不要・完成版）     │
+│  ・Excel手順書（.xlsm）やSOPを読み込み、手順をナビゲート    │
+│  ・安全に検証された「アンチグラビティ用プロンプト」を生成   │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ プロンプトをコピー＆ペースト
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ ADK Agent (HITMAN Core)                                     │
-│  ├─ Gemini 2.5 Flash (LLM推論)                              │
-│  ├─ SOP Database (手順書エンジン: Step 1-1 〜 4-2, R-1, E-1)│
-│  ├─ ログ客観検証ツール (verify_step_output)                 │
-│  ├─ SQL影響予測・要件合致ツール (analyze_sql_impact)        │
-│  ├─ エスカレーション・ゲート制御 (evaluate_escalation_gate) │
-│  ├─ 最終評価完了報告書 (generate_final_report)              │
-│  ├─ 長期記憶 (Memory Bank / PreloadMemoryTool)              │
-│  └─ 障害対応ナレッジベース (RAG / consult_sop_knowledge)    │
+│ 【Step 2】アンチグラビティ（Antigravity / agy）              │
+│  ・受講生自身のPC上で動作するAIペアプログラミング環境       │
+│  ・受講生個人の有料APIキー（Vertex AI / Gemini API）で駆動  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ 裏側でSkillsを自律読み込み
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 【Step 3】リポジトリ内 Skills（.agents/skills/）             │
+│  ・M0〜M5 ガバナンス＆セキュリティ検証（IAM・Model Armor等） │
+│  ・独自エージェント企画（pick-your-agent-project）           │
+│  ・フロントエンド、A2UI、RAG、メモリバンク、デプロイスキル │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ 高度な開発技術を体得
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 【Goal】受講生各自が思い思いのAIツールを開発＆Cloud Run公開 │
+│  ・社内問い合わせボット、ログ分析ツール、コード監査AIなど   │
+│  ・各自が企画・実装したコンテナを自分のCloud Runへデプロイ   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. 受講者環境の前提条件
+## 2. 受講者環境の前提条件とアカウント準備
 
-- **PC環境**: Windows 10/11 または macOS
-- **開発ツール**: Python 3.12+, uv (推奨パッケージマネージャー), Git
-- **Google アカウント**: 各受講者個人の Google アカウント（GCP利用可能）
+> [!IMPORTANT]
+> **研修用Googleアカウントの配布はありません**  
+> 本研修では、受講生各自が **個人のGoogleアカウント（`@gmail.com` 等）** を使用し、自身の Google Cloud プロジェクトを作成して **有料APIキー（Vertex AI Express Mode / Gemini APIキー）を自前で払い出して** 受講します。
+
+### 受講者自身が用意するもの
+1. **PC環境**: Windows 10/11 または macOS
+2. **開発ツール**: Python 3.12+, uv (推奨パッケージマネージャー), Git
+3. **個人Googleアカウント**: クレジットカード登録または無料トライアル（$300クレジット）が有効なアカウント
+4. **Google Antigravity**: デスクトップアプリ（Antigravity 2.0）または CLI (`agy`)
 
 ---
 
 ## 3. 実践ハンズオン・ステップ（全10マイルストーン）
 
-### 【マイルストーン 1】GCPプロジェクト作成と課金の有効化
+### 【マイルストーン 1】個人GCPプロジェクトの作成と課金（Billing）の有効化
 ※ 初心者が最もつまずきやすい最重要ステップです！
 
 1. [Google Cloud Console](https://console.cloud.google.com/) に個人の Google アカウントでログイン。
-2. 画面上部のプロジェクト選択から **「新しいプロジェクト」** をクリック。
-   - プロジェクト名: ltx-ai-training-lab（または個人識別可能な名称）
-3. **課金（Billing）の紐付け（必須）**:
-   - メニューから「お支払い（Billing）」を開き、有効な請求先アカウントをプロジェクトに紐付ける。
+2. 画面上部のプロジェクト選択から **「新しいプロジェクト」** を作成。
+   - プロジェクト名: `altx-ai-training-<自分の名前>`（例: `altx-ai-training-tanaka`）
+3. **お支払い（Billing）の紐付け（必須）**:
+   - メニューから「お支払い（Billing）」を開き、有効なクレジットカードまたは無料トライアル枠をプロジェクトに紐付ける。
    - **注意**: 課金が未設定のプロジェクトでは Vertex AI の推論および Cloud Run のビルドが 403 Forbidden で遮断されます。
 
-### 【マイルストーン 2】APIキーの発行と種別の理解
+### 【マイルストーン 2】個人有料APIキーの発行と種別の理解
 
-1. **APIキーの種類**:
-   - **AI Studio キー (AIza...)**: Generative Language API (generativelanguage.googleapis.com) 向け。個人開発や手軽な検証用。
-   - **Vertex AI Express Mode キー (AQ...)**: Vertex AI (iplatform.googleapis.com) 向け。エンタープライズのクォータと連携する高信頼キー。
-2. キーを取得したら、プロジェクトルートの .env ファイルに設定します：
-   `ash
-   GOOGLE_API_KEY=AQ.xxxx...
-   GOOGLE_CLOUD_PROJECT=altx-ai-training-lab
-   GOOGLE_CLOUD_LOCATION=us-central1
+1. **APIキーの発行手順**:
+   - **Vertex AI Express Mode キー（推奨）**: Google Cloud Console の [Vertex AI Studio] ➡️ [API キー] より作成。キーの先頭が `AQ.` で始まる高信頼キーです。
+   - **AI Studio キー**: [Google AI Studio (aistudio.google.com)] より発行。キーの先頭が `AIza...` で始まるキーです。
+2. 取得した個人キーを、ローカル環境の `.env` または環境変数に設定します：
+   ```bash
+   GOOGLE_API_KEY=AQ.xxxx...（あなたの個人キー）
+   GOOGLE_CLOUD_PROJECT=altx-ai-training-xxxx
+   GOOGLE_CLOUD_LOCATION=global
    GOOGLE_GENAI_USE_VERTEXAI=true
-   `
+   ```
 
 ### 【マイルストーン 3】クラウド必須APIの有効化
 
 Cloud Shell またはローカルの gcloud CLI にて以下のコマンドを実行し、必要な API を一括有効化します：
 
-`ash
-# Google Cloud CLI へのログイン
+```bash
+# Google Cloud CLI へのログイン（個人アカウント）
 gcloud auth login
 
 # プロジェクトの設定
-gcloud config set project altx-ai-training-lab
+gcloud config set project altx-ai-training-xxxx
 
 # 必須APIの有効化
 gcloud services enable \
@@ -92,79 +107,66 @@ gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com
-`
+```
 
-### 【マイルストーン 4】ADK エージェントの設計とツール実装
+### 【マイルストーン 4】HITMAN Cockpit を操作しプロンプトを取得する
 
-pp/agent.py にエージェントのプロンプトとビジネスロジックを関数ツールとして実装します。
+1. 鈴木 駿平がデプロイした **HITMAN Cockpit**（`https://altx-hitman-cockpit-1070367799384.us-central1.run.app`）をブラウザで開く。
+2. 現場実務用Excel手順書（`.xlsm`）をアップロード、またはプリセットのSOP手順を選択。
+3. 画面に表示される **「安全チェック」「パラメータ置換」「Wチェック承認」** を確認。
+4. HITMAN が提示する **「アンチグラビティに投入する検証済みプロンプト」** をコピーする。
 
-1. **ステップ順序の厳格制御（ルール1）**: 前ステップの検証が合格していない場合、手順スキップを拒否する。
-2. **事前確認コマンドの強制**: 本番コマンド前に必ず空き容量（df -h）や事前SELECTを実行させる。
-3. **ログ客観検証ツール (erify_step_output)**: ターミナルログから成功・警告・失敗を判定。
-4. **SQL事前影響評価 (nalyze_sql_impact)**: 投入予定SQLのWHERE条件と更新予測を事前検証。
-5. **エスカレーション・ゲート (evaluate_escalation_gate)**: 判断根拠のない作業再開を遮断。上長・リーダー承認で特別モード（2人体制）へ移行。
-6. **最終評価報告書 (generate_final_report)**: 作業所要時間、Before/After、成果物保全状況をレポート化。
+### 【マイルストーン 5】アンチグラビティへのプロンプト投入と裏側SKILLの体感
 
-### 【マイルストーン 5】セッション長期記憶（Memory Bank）の統合
+1. 受講生のPCで **アンチグラビティ（Antigravity）** を起動。
+2. HITMAN からコピーしたプロンプトを投入する。
+3. アンチグラビティが裏側の **AIガバナンス研修スキル（`novasmart-governance-lab`）** を自律的に読み込み、以下のタスクを実行する様を観察する：
+   - **M0（すべてを見る）**: カタログにないシャドウエージェントや共有ログインの検知。
+   - **M1（アクションを起こす）**: 専用サービスアカウントの分離と最小権限化（IAM適正化）。
+   - **M2（接続の制御）**: リソースレベル IAM による不正呼び出し遮断（200 ➡️ 403）。
+   - **M3（コンテンツ保護）**: Model Armor によるインジェクション攻撃の防御。
+   - **M5（評価と採点）**: 客観的スコアカードによる品質判定。
 
-過去の作業セッションで得られたオペレーターの習熟度や注意点を記憶するため、ADKの Memory Bank 機構を導入します：
+### 【マイルストーン 6】思い思いのツールを企画する（`pick-your-agent-project`）
 
-`python
-from google.adk.tools.preload_memory_tool import PreloadMemoryTool
-from google.adk.agents.callback_context import CallbackContext
+受講生は全員同じツールを作るのではなく、アンチグラビティの支援を受けながら **「自分の業務で本当に欲しいツール」** をブレインストーミングします：
+- **社内ナレッジ検索・FAQボット**（社内規程や障害マニュアルをRAG検索）
+- **SQL・ログ自動分析エージェント**（エラーログを読み込み原因と対策を提示）
+- **コードレビュー・セキュリティ監査アシスタント**
+- **議事録・ドキュメント要約生成ツール**
 
-async def generate_memories_callback(callback_context: CallbackContext):
-    try:
-        await callback_context.add_session_to_memory()
-    except Exception:
-        pass # ローカル実行時のフォールバック
+### 【マイルストーン 7】エージェントコードとフロントエンドの実装
 
-root_agent = Agent(
-    name="hitman",
-    tools=[PreloadMemoryTool(), ...],
-    after_agent_callback=generate_memories_callback,
-    ...
-)
-`
-
-### 【マイルストーン 6】RAG（障害対応ナレッジベース）の実装と注意点
-
-> ⚠️ **Gemini 2.5 のツール競合ルール（超重要）:**
-> Vertex AI の組み込み RAG（VertexAiRagRetrieval）は、Gemini 2.5 では他のカスタム関数ツール（A2UIやSOPツール）と同時に渡すと 400 Bad Request INVALID_ARGUMENT エラーとなります。
-> そのため、RAGナレッジの検索は **プレーンな Python 関数ツール（consult_sop_knowledge）** として定義し、自然言語クエリから社内マニュアルを検索して回答する構成にします。
-
-### 【マイルストーン 7】2画面インタラクティブWebコックピット
-
-rontend/main.py と rontend/static/index.html により、以下の2画面コックピットを立ち上げます：
-- **左画面**: AIペアオペレーターとの対話チャット（A2UIリッチカード表示）
-- **右画面**: 手順進捗バー、事前SQL影響評価フォーム、エスカレーション・ゲート解除パネル、最終評価レポート出力
+アンチグラビティのコード生成機能を使い、企画したツールの実装を行います：
+- **ADK Agent 実装**: `app/agent.py` にGeminiモデル、システムプロンプト、ツール関数を定義。
+- **A2UI リッチカード統合**: テキストだけでなく、表やカード形式で綺麗に出力。
+- **FastAPI プロキシ**: ブラウザとエージェントをシームレスに中継。
 
 ### 【マイルストーン 8】自動テストによる品質保証（Pytest）
 
-テスト駆動で品質を担保するため、全機能のユニットテストと結合テストを実行します：
-`ash
+テスト駆動で品質を担保するため、自作エージェントの単体テストと結合テストを実行します：
+```bash
 uv run pytest
-`
-- 全21件のテストが Green（合格）になることを確認します。
+```
+- 全テストが Green（合格）になることを確認します。
 
-### 【マイルストーン 9】Cloud Run へのワンコマンド本番デプロイ
+### 【マイルストーン 9】自作ツールの Cloud Run 本番デプロイ
 
-自作した AI コックピットを世界中からアクセス可能な Cloud Run へデプロイします：
+自作したオリジナルAIツールを、受講生個人の GCP プロジェクト上の Cloud Run へデプロイします：
 
-`ash
-# Dockerfile と .dockerignore を準備し、以下を実行
-gcloud run deploy altx-hitman-cockpit \
+```bash
+gcloud run deploy my-custom-agent \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars "GOOGLE_API_KEY=AQ.xxx,GOOGLE_CLOUD_PROJECT=altx-ai-training-lab,GOOGLE_CLOUD_LOCATION=us-central1,GOOGLE_GENAI_USE_VERTEXAI=true"
-`
+  --set-env-vars "GOOGLE_API_KEY=AQ.xxx,GOOGLE_CLOUD_PROJECT=altx-ai-training-xxxx,GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=true"
+```
 
-デプロイ完了後に出力される Service URL (https://altx-hitman-cockpit-xxxx.run.app) をブラウザで開けば、受講生の開発したコックピットが本番稼働します！
+デプロイ完了後に出力される Service URL（`https://my-custom-agent-xxxx.run.app`）をブラウザで開けば、世界中からアクセス可能な受講生独自のAIツールが完成します！
 
-### 【マイルストーン 10】GitHubへのプッシュと共有
+### 【マイルストーン 10】成果物の発表と共有
 
-開発したリポジトリを受講生各自の GitHub アカウントにプッシュし、成果物として提出・ポートフォリオ化します。
+受講生各自の GitHub アカウントに完成したリポジトリをプッシュし、チーム内で「どんな課題を解決するどんなAIツールを作ったか」のデモ・成果発表を行います。
 
 ---
 
@@ -172,10 +174,10 @@ gcloud run deploy altx-hitman-cockpit \
 
 | 症状 / エラー | 原因 | 解決手順 |
 |---|---|---|
-| 403 PERMISSION_DENIED | GCPプロジェクトの課金が未有効、またはAPI未有効 | マイルストーン1と3を確認し、課金紐付けと gcloud services enable を実行 |
-| gcloud: このシステムではスクリプトの実行が無効 | Windows PowerShell の ExecutionPolicy 制約 | Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force を実行 |
-| A2UI が空白または JSON 文字列で表示される | A2UI スキーママネージャーのプロンプト不整合 | BasicCatalog の指定と fter_model_callback の戻り値構造を確認 |
-| Cloud Build のアップロードが極端に遅い | .venv やキャッシュがアップロードに含まれている | .dockerignore に .venv/ や __pycache__/ を追加して除外 |
+| **403 PERMISSION_DENIED** | 個人GCPプロジェクトの課金（Billing）が未設定、またはAPIが無効 | Cloud Console の「お支払い」でカード紐付けを確認し、`gcloud services enable` を再実行 |
+| **404 NOT_FOUND (Model Garden)** | リージョン指定が誤っている | `gemini-3.6-flash` は `global` リージョンで稼働するため、`GOOGLE_CLOUD_LOCATION=global` を設定 |
+| **Antigravity でコマンド実行時に毎回確認が出る** | 権限設定が Review モードになっている | 設定（⚙️）の Agent Settings から **Tool Execution Policy** を **`Always Proceed`**（または Turbo）に変更 |
+| **Cloud Build のアップロードが遅い** | `.venv` や不要なファイルがアップロードに含まれている | `.dockerignore` に `.venv/` や `__pycache__/` を追加して除外 |
 
 ---
 **© 2026 Shunpei Suzuki (AltX Inc.)**
