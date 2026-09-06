@@ -294,23 +294,23 @@ async def chat(req: Request):
 
 
 @app.get("/api/sop")
-async def get_sop():
+async def get_sop(mode: str = None, course: str = None):
     import sys
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
     from app.agent import (
-        ACTIVE_STEP_SEQUENCE,
         get_active_approval,
         get_active_branch_rules,
         get_active_parameters,
         get_active_sop,
+        get_active_step_sequence,
     )
     return JSONResponse(content={
-        "sop": get_active_sop(),
-        "sequence": ACTIVE_STEP_SEQUENCE,
-        "parameters": get_active_parameters(),
-        "approval": get_active_approval(),
+        "sop": get_active_sop(mode=mode, course=course),
+        "sequence": get_active_step_sequence(mode=mode, course=course),
+        "parameters": get_active_parameters(mode=mode),
+        "approval": get_active_approval(mode=mode, course=course),
         "branch_rules": get_active_branch_rules(),
     })
 
@@ -513,14 +513,57 @@ async def api_set_mode(req: Request):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
-    from app.agent import set_operation_mode
+    from app.agent import (
+        get_active_approval,
+        get_active_branch_rules,
+        get_active_parameters,
+        get_active_sop,
+        get_active_step_sequence,
+        set_operation_mode,
+    )
 
     body = await req.json()
     mode = body.get("mode", "NORMAL")
+    course = body.get("course", None)
     supervisor_name = body.get("supervisor_name", "")
     supervisor_role = body.get("supervisor_role", "")
     res = set_operation_mode(mode, supervisor_name, supervisor_role)
+    effective_mode = res.get("mode", mode)
+    res["sop"] = get_active_sop(mode=effective_mode, course=course)
+    res["sequence"] = get_active_step_sequence(mode=effective_mode, course=course)
+    res["parameters"] = get_active_parameters(mode=effective_mode)
+    res["approval"] = get_active_approval(mode=effective_mode, course=course)
+    res["branch_rules"] = get_active_branch_rules()
     return JSONResponse(content=res)
+
+
+@app.post("/api/training/course")
+async def api_training_course(req: Request):
+    """研修モードの受講コース（'original' / 'hitman_clone'）を切り替える。"""
+    import sys
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+    from app.agent import (
+        get_active_approval,
+        get_active_branch_rules,
+        get_active_parameters,
+        set_training_course,
+    )
+
+    body = await req.json()
+    course = body.get("course", "original")
+    res = set_training_course(course)
+    return JSONResponse(content={
+        "result": res,
+        "course": res.get("course"),
+        "course_name": res.get("course_name"),
+        "sop": res.get("sop"),
+        "sequence": res.get("step_sequence"),
+        "parameters": get_active_parameters(mode="TRAINING"),
+        "approval": get_active_approval(mode="TRAINING", course=course),
+        "branch_rules": get_active_branch_rules(),
+    })
 
 
 @app.post("/api/supervisor/skip")

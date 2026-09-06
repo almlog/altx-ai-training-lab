@@ -448,6 +448,123 @@ def test_set_and_get_operation_mode():
     assert info["mode"] == "NORMAL"
 
 
+def test_training_sop_and_course_switching():
+    """研修モードでの受講コース切り替えおよびSOP動的取得の検証。"""
+    from app.agent import (
+        MODE_TRAINING,
+        MODE_NORMAL,
+        get_active_sop,
+        get_active_step_sequence,
+        get_active_approval,
+        set_operation_mode,
+        set_training_course,
+    )
+
+    # 1. 研修モードへ切り替え
+    set_operation_mode(MODE_TRAINING)
+    seq = get_active_step_sequence()
+    assert seq == ["T-1", "T-2", "T-3", "T-4", "T-5", "T-6"]
+
+    # 2. コースA (original) の確認
+    res_orig = set_training_course("original")
+    assert res_orig["status"] == "success"
+    assert res_orig["course"] == "original"
+    sop_orig = get_active_sop()
+    assert "T-1" in sop_orig
+    assert "T-6" in sop_orig
+    assert "gemini-3.8-flash" in sop_orig["T-1"]["cautions"]
+    assert "altx-agent-workspace" in sop_orig["T-1"]["command"]
+
+    appr_orig = get_active_approval()
+    assert "コースA" in appr_orig["work_title"]
+
+    # 3. コースB (hitman_clone) の確認
+    res_clone = set_training_course("hitman_clone")
+    assert res_clone["status"] == "success"
+    assert res_clone["course"] == "hitman_clone"
+    sop_clone = get_active_sop()
+    assert "hitman_spec.md" in sop_clone["T-2"]["command"]
+    assert "my_hitman" in sop_clone["T-3"]["command"]
+
+    appr_clone = get_active_approval()
+    assert "コースB" in appr_clone["work_title"]
+
+    # 4. 通常モード復帰時は通常手順書に戻る
+    set_operation_mode(MODE_NORMAL)
+    seq_norm = get_active_step_sequence()
+    assert seq_norm[0] == "1-1"
+
+
+def test_training_step_verification_t1_to_t6():
+    """研修ステップ T-1 〜 T-6 の客観ログ検証と合否判定の検証。"""
+    from app.agent import verify_step_output
+
+    # T-1: 正常合格 vs 自己申告差し戻し
+    t1_pass = verify_step_output("T-1", "mkdir altx-agent-workspace\ngit clone https://github.com/almlog/altx-ai-training-lab.git\nCloning into 'altx-ai-training-lab'...")
+    assert t1_pass["verdict"] == "SUCCESS"
+    assert t1_pass["w_check_status"] == "VERIFIED_APPROVED"
+
+    t1_fail = verify_step_output("T-1", "環境構築完了しました！次はどうすればいいですか？")
+    assert t1_fail["verdict"] == "FAILED"
+
+    # T-2: Project Brief出力 vs ログ不在
+    t2_pass = verify_step_output("T-2", "# Project Brief\n- エージェント名: AutoOpsAgent\n- 目的: 現場ログ監視と異常検知\n- ツール: log_analyzer, a2ui_card")
+    assert t2_pass["verdict"] == "SUCCESS"
+
+    t2_fail = verify_step_output("T-2", "要件定義作りました。進めていいですか？")
+    assert t2_fail["verdict"] == "FAILED"
+
+    # T-3: エージェント実装 vs ログ不在
+    t3_pass = verify_step_output("T-3", "agent.py created\nimport google.adk\nroot_agent = Agent(name='my_agent')")
+    assert t3_pass["verdict"] == "SUCCESS"
+
+    # T-4: 単体テスト全件PASSED vs FAILED検知
+    t4_pass = verify_step_output("T-4", "==================== 5 passed in 0.18s ====================")
+    assert t4_pass["verdict"] == "SUCCESS"
+
+    t4_fail = verify_step_output("T-4", "FAILED tests/test_agent.py::test_tools - AssertionError: 500 != 200\n1 failed, 4 passed in 0.20s")
+    assert t4_fail["verdict"] == "FAILED"
+    assert t4_fail["w_check_status"] == "BLOCKED_RETRY"
+
+    # T-5: Cloud Run デプロイ成功
+    t5_pass = verify_step_output("T-5", "Deploying container to Cloud Run service [my-agent]...\nService URL: https://my-agent-xyz-an.a.run.app\nDone.")
+    assert t5_pass["verdict"] == "SUCCESS"
+
+    # T-6: 個人GitHub公開・修了
+    t6_pass = verify_step_output("T-6", "Enumerating objects: 42, done.\nTo https://github.com/suzuki-shunpei/my-agent.git\n * [new branch]      main -> main")
+    assert t6_pass["verdict"] == "SUCCESS"
+    assert "修了承認" in t6_pass["autonomous_verdict"]
+
+
+def test_frontend_training_course_endpoints():
+    """フロントエンドAPIプロキシでの研修モード・コース切り替えエンドポイントの検証。"""
+    from fastapi.testclient import TestClient
+    from frontend.main import app
+    client = TestClient(app)
+
+    # 1. GET /api/sop?mode=TRAINING&course=original
+    res_orig = client.get("/api/sop?mode=TRAINING&course=original")
+    assert res_orig.status_code == 200
+    data_orig = res_orig.json()
+    assert data_orig["sequence"] == ["T-1", "T-2", "T-3", "T-4", "T-5", "T-6"]
+    assert "T-1" in data_orig["sop"]
+    assert "コースA" in data_orig["approval"]["work_title"]
+
+    # 2. GET /api/sop?mode=TRAINING&course=hitman_clone
+    res_clone = client.get("/api/sop?mode=TRAINING&course=hitman_clone")
+    assert res_clone.status_code == 200
+    data_clone = res_clone.json()
+    assert "コースB" in data_clone["approval"]["work_title"]
+
+    # 3. POST /api/training/course
+    res_post_course = client.post("/api/training/course", json={"course": "hitman_clone"})
+    assert res_post_course.status_code == 200
+    post_data = res_post_course.json()
+    assert post_data["course"] == "hitman_clone"
+    assert "T-1" in post_data["sop"]
+
+
+
 
 
 

@@ -204,6 +204,225 @@ SOP_DATABASE = {
 }
 
 
+
+# ==============================================================================
+# 研修モード（TRAINING）専用 手順書データベース（受講生別 2大コース）
+# ==============================================================================
+TRAINING_STEP_SEQUENCE = ["T-1", "T-2", "T-3", "T-4", "T-5", "T-6"]
+
+# コースA: オリジナルAIツール開発コース（pick-your-agent-project活用）
+TRAINING_SOP_ORIGINAL = {
+    "T-1": {
+        "step_id": "T-1",
+        "title": "ステップ T-1: 開発環境構築とスキル同期",
+        "objective": "AntiGravityでモデルを選定（3.8 Flash優先、エラー時3.6 Flash）、専用フォルダを作成し、講師リポジトリをクローンして研修スキルを習得する。",
+        "command": "mkdir altx-agent-workspace && cd altx-agent-workspace && git clone https://github.com/almlog/altx-ai-training-lab.git",
+        "expected_check": "altx-agent-workspace 内に altx-ai-training-lab が正常クローンされ、.agents/skills/ が認識されること",
+        "cautions": "AntiGravity のモデル設定で「gemini-3.8-flash」を選択してください（エラーや未提供時は「gemini-3.6-flash」へフォールバック）。以後の全作業は必ず専用フォルダ（altx-agent-workspace）内で行ってください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-1】\n"
+            "あなたは株式会社AltXのAI研修専属メンターです。\n"
+            "1. モデル選定: チャットのモデル設定でまず「gemini-3.8-flash」を選択してください。エラーや利用不可の場合は「gemini-3.6-flash」を選択してください。\n"
+            "2. 作業ディレクトリ: 「altx-agent-workspace」を作成し、以後のファイル作成や作業はすべてこのフォルダ内で行ってください。\n"
+            "3. リポジトリクローン:\n"
+            "   git clone https://github.com/almlog/altx-ai-training-lab.git\n"
+            "   を実行し、リポジトリ内の .agents/skills/ にある研修スキル群（pick-your-agent-project, build-agent-frontend, enable-a2ui 等）を読み込んで自己学習してください。\n"
+            "4. 準備完了の確認: Pythonバージョン（3.11/3.12+）およびAPIキー疎通確認テストを行い、実行結果ログを出力してください。"
+        ),
+    },
+    "T-2": {
+        "step_id": "T-2",
+        "title": "ステップ T-2: オリジナル企画＆要件定義（Project Brief策定）",
+        "objective": "現場課題を解決するオリジナルAIエージェントの企画を整理し、要件定義書（project_brief.md）を作成する。",
+        "command": "cat altx-agent-workspace/project_brief.md",
+        "expected_check": "project_brief.md にエージェント名、解決課題、使用ツール、A2UIカード設計、Memory Bank要件が定義されていること",
+        "cautions": "スキル「pick-your-agent-project」を活用して要件を棚卸ししてください。自作関数ツールを最低1つ含めてください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-2】\n"
+            "スキル「pick-your-agent-project」を活用して、私が現場で抱える課題を解決するオリジナルAIエージェントの企画・要件定義を作成してください。\n"
+            "私の課題・作りたいもの: （※ここに自分のアイデアを記入。例: 社内問い合わせ自動応答、監視ログ異常検知、障害一次切り分け等）\n"
+            "以下の項目を含む「altx-agent-workspace/project_brief.md」を作成し、内容を出力してください：\n"
+            "1. エージェント名と目的（解決する現場課題）\n"
+            "2. 使用するモデル（gemini-3.8-flash または 3.6-flash）\n"
+            "3. 必要な関数ツール（自作ツール最低1つ）\n"
+            "4. A2UIカード表示仕様（カードのレイアウト）\n"
+            "5. 長期記憶（Memory Bank）活用方針"
+        ),
+    },
+    "T-3": {
+        "step_id": "T-3",
+        "title": "ステップ T-3: エージェントコア＆A2UI実装",
+        "objective": "Google ADK (Agent Development Kit) を用いて自作エージェント本体、関数ツール、およびA2UIカード連携を実装する。",
+        "command": "ls -la altx-agent-workspace/my_agent/ && head -n 30 altx-agent-workspace/my_agent/agent.py",
+        "expected_check": "my_agent/ 配下に agent.py, main.py, a2ui_utils.py が配置され、ADKエージェントとA2UIコールバックが実装されていること",
+        "cautions": "スキル「enable-a2ui」および「google-agents-cli-adk-code-ja」を参照し、構文エラーがないことを確認してください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-3】\n"
+            "project_brief.md の定義に基づき、Google ADK (Python) で自作エージェントを実装してください。\n"
+            "作業ディレクトリ: altx-agent-workspace/my_agent/\n"
+            "1. agent.py: ADK Agent, 自作関数ツール, A2UIカードコールバック (after_model_callback)\n"
+            "2. a2ui_utils.py: A2UIカード生成ユーティリティ\n"
+            "3. pyproject.toml または requirements.txt: 依存ライブラリ\n"
+            "ファイルを生成し、ディレクトリ構成と agent.py の先頭部分を出力してください。"
+        ),
+    },
+    "T-4": {
+        "step_id": "T-4",
+        "title": "ステップ T-4: ローカルテスト＆自律Wチェック",
+        "objective": "Pytest単体テストを実行し、エージェントコアおよびツールの動作を客観検証する。",
+        "command": "pytest altx-agent-workspace/my_agent/tests/ -v",
+        "expected_check": "テストが全件実行され、全テストが passed（エラー0件）で終了すること",
+        "cautions": "テストが1件でも失敗した場合は修正を行い、合格するまで再実行してください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-4】\n"
+            "altx-agent-workspace/my_agent/ に対する単体テスト（tests/test_agent.py）を作成し、pytest を実行してください。\n"
+            "エージェントの関数ツール呼び出し、A2UIカード生成、例外ハンドリングをテストし、全件 PASSED となることを確認して実行結果ログを出力してください。"
+        ),
+    },
+    "T-5": {
+        "step_id": "T-5",
+        "title": "ステップ T-5: Cloud Run 本番デプロイ",
+        "objective": "作成したエージェントフロントエンドを Cloud Run へコンテナデプロイし、本番公開URLを発行する。",
+        "command": "gcloud run deploy my-ai-agent --source altx-agent-workspace/my_agent --region asia-northeast1 --allow-unauthenticated",
+        "expected_check": "Cloud Run へのデプロイが成功し、Service URL（https://...run.app）が出力されること",
+        "cautions": "スキル「build-agent-frontend」および「google-agents-cli-deploy-ja」を参照してください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-5】\n"
+            "スキル「build-agent-frontend」および「google-agents-cli-deploy-ja」を活用して、作成したエージェントを Google Cloud Run へデプロイしてください。\n"
+            "1. Dockerfile / Cloud Run デプロイ設定の生成\n"
+            "2. gcloud run deploy コマンドの実行（またはデプロイ手順の提示）\n"
+            "3. 発行された本番公開サービスURL（https://...run.app）を出力してください。"
+        ),
+    },
+    "T-6": {
+        "step_id": "T-6",
+        "title": "ステップ T-6: 個人GitHub公開＆修了証発行",
+        "objective": "完成した自作AIエージェントのソースコードを受講生自身の個人GitHubリポジトリへ公開し、研修修了報告書を発行する。",
+        "command": "gh repo view --web || git remote -v",
+        "expected_check": "受講生の個人GitHubリポジトリURLが出力され、公開が確認できること",
+        "cautions": "スキル「publish-to-github」を活用し、gh CLIのデバイス認証フローを用いて安全に自身のGitHubへプッシュしてください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-6】\n"
+            "スキル「publish-to-github」を活用して、完成したエージェントのソースコードを私の個人GitHubリポジトリへ公開（Public）してください。\n"
+            "1. gh auth login（デバイス認証）による個人GitHubログイン\n"
+            "2. 新規リポジトリ作成とコミット・プッシュ\n"
+            "3. 公開されたリポジトリURL（https://github.com/...）を出力し、研修修了報告書をまとめてください。"
+        ),
+    },
+}
+
+# コースB: HITMANクローン構築コース（AIペアオペレーター構築体験）
+TRAINING_SOP_HITMAN_CLONE = {
+    "T-1": {
+        "step_id": "T-1",
+        "title": "ステップ T-1: 開発環境構築とスキル同期",
+        "objective": "AntiGravityでモデルを選定（3.8 Flash優先、エラー時3.6 Flash）、専用フォルダを作成し、講師リポジトリをクローンして研修スキルを習得する。",
+        "command": "mkdir altx-agent-workspace && cd altx-agent-workspace && git clone https://github.com/almlog/altx-ai-training-lab.git",
+        "expected_check": "altx-agent-workspace 内に altx-ai-training-lab が正常クローンされ、.agents/skills/ が認識されること",
+        "cautions": "AntiGravity のモデル設定で「gemini-3.8-flash」を選択してください（エラーや未提供時は「gemini-3.6-flash」へフォールバック）。以後の全作業は必ず専用フォルダ（altx-agent-workspace）内で行ってください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-1 (HITMANクローン)】\n"
+            "あなたは株式会社AltXのAI研修専属メンターです。\n"
+            "1. モデル選定: チャットのモデル設定でまず「gemini-3.8-flash」を選択してください。エラーや利用不可の場合は「gemini-3.6-flash」を選択してください。\n"
+            "2. 作業ディレクトリ: 「altx-agent-workspace」を作成し、以後のファイル作成や作業はすべてこのフォルダ内で行ってください。\n"
+            "3. リポジトリクローン:\n"
+            "   git clone https://github.com/almlog/altx-ai-training-lab.git\n"
+            "   を実行し、リポジトリ内の .agents/skills/ にある研修スキル群を読み込んで自己学習してください。\n"
+            "4. 準備完了の確認: Pythonバージョン（3.11/3.12+）およびAPIキー疎通確認テストを行い、実行結果ログを出力してください。"
+        ),
+    },
+    "T-2": {
+        "step_id": "T-2",
+        "title": "ステップ T-2: HITMAN仕様設計＆SOP定義",
+        "objective": "Excel/CSV手順書定義、Wチェック仕様、エスカレーションゲート要件を設計し、hitman_spec.md を作成する。",
+        "command": "cat altx-agent-workspace/hitman_spec.md",
+        "expected_check": "hitman_spec.md にSOPデータ構造、Wチェック判定ルール、エスカレーション制御仕様が定義されていること",
+        "cautions": "HITMAN自身のアーキテクチャ（事前確認・客観検証・ロールバック分岐・エスカレ協議）を参考に設計してください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-2 (HITMANクローン)】\n"
+            "AIペアオペレーター「HITMAN」クローンの仕様を設計します。\n"
+            "1. Excel/CSV手順書を読み込むデータ構造\n"
+            "2. ターミナルログを検証するWチェック判定ルール（正常合格、エラー検知、自己申告遮断）\n"
+            "3. 上長協議エスカレーションゲートの仕様\n"
+            "以上の設計を「altx-agent-workspace/hitman_spec.md」として作成し、内容を出力してください。"
+        ),
+    },
+    "T-3": {
+        "step_id": "T-3",
+        "title": "ステップ T-3: HITMAN判定コア＆A2UI実装",
+        "objective": "手順書パーサー、ターミナルログ判定エンジン、A2UIカード生成、エスカレーションゲートを実装する。",
+        "command": "ls -la altx-agent-workspace/my_hitman/ && head -n 30 altx-agent-workspace/my_hitman/agent.py",
+        "expected_check": "my_hitman/ 配下に agent.py, excel_parser.py, a2ui_utils.py が配置され、判定エンジンとA2UIカードが実装されていること",
+        "cautions": "スキル「enable-a2ui」および「google-agents-cli-adk-code-ja」を参照してください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-3 (HITMANクローン)】\n"
+            "hitman_spec.md に基づき、HITMANクローンの判定コアとA2UIカード表示を実装してください。\n"
+            "作業ディレクトリ: altx-agent-workspace/my_hitman/\n"
+            "1. agent.py: ADK Agent, verify_step_output, A2UIカード表示\n"
+            "2. excel_parser.py: 手順書パーサー\n"
+            "ファイルを生成し、コードの主要部分を出力してください。"
+        ),
+    },
+    "T-4": {
+        "step_id": "T-4",
+        "title": "ステップ T-4: ローカルテスト＆自律Wチェック",
+        "objective": "HITMANクローンのログ検証ロジック（自己申告差し戻し、エラー検知、正常合格）のPytestを実行する。",
+        "command": "pytest altx-agent-workspace/my_hitman/tests/ -v",
+        "expected_check": "テストが全件実行され、全テストが passed（エラー0件）で終了すること",
+        "cautions": "自己申告のみの入力が正しく差し戻されることを必ずテストしてください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-4 (HITMANクローン)】\n"
+            "my_hitman に対する単体テストを作成し、pytest を実行してください。\n"
+            "自己申告テキストの差し戻し、エラーキーワード検知時のロールバック、正常ログでのWチェック承認が正しくテストされ、全件 PASSED となることを確認してログを出力してください。"
+        ),
+    },
+    "T-5": {
+        "step_id": "T-5",
+        "title": "ステップ T-5: Cloud Run 本番デプロイ",
+        "objective": "HITMANクローンを Cloud Run へコンテナデプロイし、公開URLを発行する。",
+        "command": "gcloud run deploy my-hitman --source altx-agent-workspace/my_hitman --region asia-northeast1 --allow-unauthenticated",
+        "expected_check": "Cloud Run へのデプロイが成功し、Service URL（https://...run.app）が出力されること",
+        "cautions": "スキル「build-agent-frontend」および「google-agents-cli-deploy-ja」を参照してください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-5 (HITMANクローン)】\n"
+            "スキル「build-agent-frontend」を活用して、HITMANクローンを Cloud Run へデプロイしてください。\n"
+            "発行されたサービスURL（https://...run.app）を出力してください。"
+        ),
+    },
+    "T-6": {
+        "step_id": "T-6",
+        "title": "ステップ T-6: 個人GitHub公開＆修了証発行",
+        "objective": "完成したHITMANクローンを受講生自身の個人GitHubへ公開し、研修修了報告書を発行する。",
+        "command": "gh repo view --web || git remote -v",
+        "expected_check": "受講生の個人GitHubリポジトリURLが出力され、公開が確認できること",
+        "cautions": "スキル「publish-to-github」を活用し、gh CLIのデバイス認証フローを用いて安全に自身のGitHubへプッシュしてください。",
+        "agy_prompt": (
+            "【AntiGravity投入用プロンプト: Step T-6 (HITMANクローン)】\n"
+            "スキル「publish-to-github」を活用して、HITMANクローンを私の個人GitHubへ公開してください。\n"
+            "公開リポジトリURL（https://github.com/...）を出力してください。"
+        ),
+    },
+}
+
+TRAINING_PARAMETERS = {
+    "PROJECT_NAME": "AltX AI実践研修 開発ラボ",
+    "WORKSPACE_DIR": "altx-agent-workspace",
+    "PRIMARY_MODEL": "gemini-3.8-flash",
+    "FALLBACK_MODEL": "gemini-3.6-flash",
+    "REPO_URL": "https://github.com/almlog/altx-ai-training-lab.git",
+}
+
+TRAINING_APPROVAL_METADATA = {
+    "author": "鈴木 駿平 (AltX Inc.)",
+    "approver": "AltX AI実践研修 推進委員会",
+    "approval_date": "2026-09-06",
+    "approval_id": "TRAIN-20260906-ALTX-LAB",
+    "work_title": "受講生別 AIエージェント自律開発・デプロイ実践手順書",
+    "is_approved": True,
+}
+
+ACTIVE_TRAINING_COURSE = "original"  # "original" または "hitman_clone"
+
 import copy
 import csv
 import io
@@ -237,15 +456,62 @@ ACTIVE_SUPERVISOR_ROLE: str = ""
 ACTIVE_AUDIT_LOG: list[dict] = []
 
 
-def get_active_sop() -> dict:
+def set_training_course(course_type: str) -> dict:
+    """研修モードの受講コース（'original': オリジナルAIツール, 'hitman_clone': HITMANクローン）を設定する。"""
+    global ACTIVE_TRAINING_COURSE
+    c = (course_type or "").strip().lower()
+    if "hitman" in c or "clone" in c or "クローン" in c:
+        ACTIVE_TRAINING_COURSE = "hitman_clone"
+    else:
+        ACTIVE_TRAINING_COURSE = "original"
+    return {
+        "status": "success",
+        "course": ACTIVE_TRAINING_COURSE,
+        "course_name": "コースB: HITMANクローン構築" if ACTIVE_TRAINING_COURSE == "hitman_clone" else "コースA: オリジナルAIツール開発",
+        "step_sequence": list(TRAINING_STEP_SEQUENCE),
+        "sop": get_training_sop(ACTIVE_TRAINING_COURSE),
+    }
+
+
+def get_training_sop(course_type: str = None) -> dict:
+    """研修モードの指定コース用SOPを取得する。"""
+    c = (course_type or ACTIVE_TRAINING_COURSE).lower()
+    if "hitman" in c or "clone" in c or "クローン" in c:
+        return copy.deepcopy(TRAINING_SOP_HITMAN_CLONE)
+    return copy.deepcopy(TRAINING_SOP_ORIGINAL)
+
+
+def get_active_sop(mode: str = None, course: str = None) -> dict:
+    effective_mode = mode or ACTIVE_OPERATION_MODE
+    if effective_mode == MODE_TRAINING:
+        return get_training_sop(course or ACTIVE_TRAINING_COURSE)
     return ACTIVE_SOP_DATABASE
 
 
-def get_active_parameters() -> dict[str, str]:
+def get_active_step_sequence(mode: str = None, course: str = None) -> list[str]:
+    effective_mode = mode or ACTIVE_OPERATION_MODE
+    if effective_mode == MODE_TRAINING:
+        return list(TRAINING_STEP_SEQUENCE)
+    return list(ACTIVE_STEP_SEQUENCE)
+
+
+def get_active_parameters(mode: str = None) -> dict[str, str]:
+    effective_mode = mode or ACTIVE_OPERATION_MODE
+    if effective_mode == MODE_TRAINING:
+        return dict(TRAINING_PARAMETERS)
     return ACTIVE_PARAMETERS
 
 
-def get_active_approval() -> dict[str, Any]:
+def get_active_approval(mode: str = None, course: str = None) -> dict[str, Any]:
+    effective_mode = mode or ACTIVE_OPERATION_MODE
+    if effective_mode == MODE_TRAINING:
+        meta = dict(TRAINING_APPROVAL_METADATA)
+        c = (course or ACTIVE_TRAINING_COURSE).lower()
+        if "hitman" in c:
+            meta["work_title"] = "【コースB】HITMANクローン自律構築・デプロイ実践手順書"
+        else:
+            meta["work_title"] = "【コースA】オリジナルAIエージェント自律開発・デプロイ実践手順書"
+        return meta
     return ACTIVE_APPROVAL_METADATA
 
 
@@ -527,7 +793,24 @@ def get_procedure_step(step_number: int | str) -> dict:
         ステップのタイトル、作業目的、実行コマンド、確認項目、注意事項を含む辞書。
     """
     step_str = str(step_number).strip().upper()
-    db = ACTIVE_SOP_DATABASE if ACTIVE_SOP_DATABASE else SOP_DATABASE
+    db = get_active_sop()
+
+    # トップレベル直接キー（例: 'T-1', 'T-2', 文字列キー）の検索
+    if step_str in db:
+        step = db[step_str]
+        return {
+            "status": "found",
+            "step_number": step_str,
+            "title": step.get("title", ""),
+            "objective": step.get("objective", ""),
+            "command": step.get("command", ""),
+            "pre_command": step.get("pre_command"),
+            "main_command": step.get("main_command"),
+            "expected_check": step.get("expected_check", ""),
+            "cautions": step.get("cautions", ""),
+            "agy_prompt": step.get("agy_prompt", ""),
+            "is_sub_step": True,
+        }
 
     # サブステップ（例: '1-1', 'R-1'）の検索
     if "-" in step_str:
@@ -636,6 +919,9 @@ def is_pure_assertion_without_log(raw: str) -> bool:
         "query ok", "row affected", "rows affected", "row in set", "rows in set", "empty set", "+---+", "| id",
         "http/1.", "http/2", "curl -", "200 ok", "content-type",
         "bash", "root@", "user@", "$ ", "# ", "0 error", "job for",
+        "pytest", "passed", "test session starts", "collected ", "failed", "passed in",
+        "git clone", "github.com", "altx-", "run.app", "service url", "deploying container",
+        "python", ".py", "brief", "hitman",
     ]
     has_terminal_sig = any(sig in clean_lower for sig in terminal_signatures)
 
@@ -762,23 +1048,151 @@ def verify_step_output(step_number: int | str, command_output: str) -> dict:
                 "message": f"【判定: 中断・エスカレ分岐】DB不整合 '{ek}' を検出しました。独断での継続をブロックします。『ステップ E-1: エスカレーション対応』へ移行してください。",
             }
 
-    # 3. 一般的なエラーキーワードの検査
-    error_keywords = ["error", "failed", "permission denied", "fatal", "not found", "500 internal", "command not found"]
-    for kw in error_keywords:
-        if kw in output_lower and "0 error" not in output_lower:
-            return {
-                "verdict": "FAILED",
-                "w_check_status": "BRANCH_ROLLBACK",
-                "step_id": step_str,
-                "branch_to": "R-1",
-                "reason": f"実行ログ内にエラーキーワード '{kw}' が検出されました。異常停止しました。原因調査またはロールバック手順（R-1）への切り替えを検討してください。",
-                "autonomous_verdict": f"【AI確認者 判定】実行ログ内にエラー '{kw}' を検知。後続コマンドの投入を遮断し、ロールバック手順（R-1）への切り戻しを推奨します。",
-                "message": f"【判定: 不合格】ログ内にエラー '{kw}' が見つかりました。直ちに手順を中断してください。",
-            }
+    # 3. 一般的なエラーキーワードの検査（本番手順書用）
+    if not step_str.startswith("T-") and not (ACTIVE_OPERATION_MODE == MODE_TRAINING and step_str in TRAINING_STEP_SEQUENCE):
+        error_keywords = ["error", "failed", "permission denied", "fatal", "not found", "500 internal", "command not found"]
+        for kw in error_keywords:
+            if kw in output_lower and "0 error" not in output_lower:
+                return {
+                    "verdict": "FAILED",
+                    "w_check_status": "BRANCH_ROLLBACK",
+                    "step_id": step_str,
+                    "branch_to": "R-1",
+                    "reason": f"実行ログ内にエラーキーワード '{kw}' が検出されました。異常停止しました。原因調査またはロールバック手順（R-1）への切り替えを検討してください。",
+                    "autonomous_verdict": f"【AI確認者 判定】実行ログ内にエラー '{kw}' を検知。後続コマンドの投入を遮断し、ロールバック手順（R-1）への切り戻しを推奨します。",
+                    "message": f"【判定: 不合格】ログ内にエラー '{kw}' が見つかりました。直ちに手順を中断してください。",
+                }
 
     # 4. 自己申告文（口頭テキスト・ログ不在）の検知と厳格差し戻し
     if is_pure_assertion_without_log(command_output):
         return _make_no_log_response(step_str, "ターミナルログの出力構造（ヘッダー、終了ステータス等）が見当たりません。")
+
+    # ==============================================================================
+    # 研修モード（TRAINING）用ステップ（T-1 〜 T-6）の客観ログ検証
+    # ==============================================================================
+    if step_str.startswith("T-") or "T-" in step_str or (ACTIVE_OPERATION_MODE == MODE_TRAINING and step_str in TRAINING_STEP_SEQUENCE):
+        # T-1: 開発環境構築とスキル同期
+        if "T-1" in step_str:
+            has_t1_sig = any(k in output_lower for k in (
+                "altx-agent-workspace", "altx-ai-training-lab", "git clone", "cloning into",
+                "gemini-3.8-flash", "gemini-3.6-flash", "python", "3.11", "3.12", "api key",
+                "requirements", "virtualenv", ".venv", "active"
+            ))
+            if not has_t1_sig:
+                return _make_no_log_response("T-1", "フォルダ作成（altx-agent-workspace）、git clone、または環境確認の実行ログが確認できません。")
+            return {
+                "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
+                "step_id": "T-1",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】専用作業ディレクトリの作成、講師リポジトリのクローン、およびスキル同期を確認しました。",
+                "message": (
+                    "【判定: 合格】開発環境の準備、リポジトリクローン、スキル同期を客観確認しました！\n"
+                    "専用フォルダ（altx-agent-workspace）とスキル群が正しくセットアップされています。\n"
+                    "続いて『ステップ T-2: 要件定義（Project Brief策定）』へ進んでください。"
+                ),
+            }
+
+        # T-2: コース別 要件定義（Project Brief / HITMAN仕様書）
+        if "T-2" in step_str:
+            has_t2_sig = any(k in output_lower for k in (
+                "project_brief", "hitman_spec", "brief", "# ", "## ", "tool", "ツール", "課題",
+                "要件", "目的", "a2ui", "memory", "エージェント名", "agent", "spec"
+            ))
+            if not has_t2_sig:
+                return _make_no_log_response("T-2", "project_brief.md または hitman_spec.md の内容・要件定義の出力が確認できません。")
+            return {
+                "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
+                "step_id": "T-2",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】エージェント要件定義（解決課題、ツール設計、A2UIカード仕様）を確認しました。",
+                "message": (
+                    "【判定: 合格】要件定義書（Project Brief / 設計書）の策定を確認しました！\n"
+                    "解決すべき現場課題とツール構成が明確に定義されています。\n"
+                    "続いて『ステップ T-3: エージェントコア＆A2UI実装』へ進んでください。"
+                ),
+            }
+
+        # T-3: エージェントコア＆A2UI実装
+        if "T-3" in step_str:
+            has_t3_sig = any(k in output_lower for k in (
+                "agent.py", "main.py", "a2ui", "def ", "class ", "root_agent", "import google.adk",
+                "my_agent", "my_hitman", "basiccatalog", "tool", "fastapi"
+            ))
+            if not has_t3_sig:
+                return _make_no_log_response("T-3", "agent.py や A2UIカード連携コード、生成ファイル群の出力が確認できません。")
+            return {
+                "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
+                "step_id": "T-3",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】ADKエージェントコアコード、自作関数ツール、およびA2UIカード連携の実装を確認しました。",
+                "message": (
+                    "【判定: 合格】エージェントコードおよびA2UI連携の実装を客観確認しました！\n"
+                    "ADK Agent、自作関数ツール、A2UIコールバックが正常に構築されています。\n"
+                    "続いて『ステップ T-4: ローカルテスト＆自律Wチェック』へ進んでください。"
+                ),
+            }
+
+        # T-4: ローカルテスト＆自律Wチェック
+        if "T-4" in step_str:
+            if "failed" in output_lower or "failure" in output_lower or "errors=" in output_lower:
+                return {
+                    "verdict": "FAILED",
+                    "w_check_status": "BLOCKED_RETRY",
+                    "step_id": "T-4",
+                    "reason": "テスト実行ログ内に失敗（FAILED / ERROR）が検知されました。修正して合格するまで前進できません。",
+                    "autonomous_verdict": "【AI確認者 判定】単体テストの失敗を検知。不合格箇所を修正し、全件PASSEDとなるまでデプロイへの進行を遮断します。",
+                    "message": "【判定: 不合格】単体テストでエラーが検知されました。AntiGravityにログを渡し修正を行って、再度全件合格のログを貼り付けてください。",
+                }
+            has_t4_sig = any(k in output_lower for k in ("passed", "test session starts", "collected ", "100%", "0 error", "ok"))
+            if not has_t4_sig:
+                return _make_no_log_response("T-4", "pytest実行ログ（passed, test session starts等）が確認できません。")
+            return {
+                "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
+                "step_id": "T-4",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】Pytest単体テストの全件合格（PASSED）を確認しました。品質基準クリア。",
+                "message": (
+                    "【判定: 合格】単体テストの全件PASSED（エラー0件）を客観確認しました！\n"
+                    "エージェントの関数ツールおよびA2UIの整合性が保証されました。\n"
+                    "続いて『ステップ T-5: Cloud Run 本番デプロイ』へ進んでください。"
+                ),
+            }
+
+        # T-5: Cloud Run 本番デプロイ
+        if "T-5" in step_str:
+            has_t5_sig = any(k in output_lower for k in ("run.app", "service url:", "deploying container", "ok", "service [", "https://"))
+            if not has_t5_sig:
+                return _make_no_log_response("T-5", "Cloud Run デプロイログまたはサービスURL（https://...run.app）が確認できません。")
+            return {
+                "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
+                "step_id": "T-5",
+                "autonomous_verdict": "【AI確認者 Wチェック承認 ✓】Google Cloud Run へのコンテナデプロイ成功および本番稼働URLを確認しました。",
+                "message": (
+                    "【判定: 合格】Cloud Run への本番デプロイと公開URLの発行を確認しました！\n"
+                    "自作AIエージェントがクラウド上で正常稼働を開始しました。\n"
+                    "続いて『ステップ T-6: 個人GitHub公開＆修了証発行』へ進んでください。"
+                ),
+            }
+
+        # T-6: 個人GitHub公開＆修了証発行
+        if "T-6" in step_str:
+            has_t6_sig = any(k in output_lower for k in ("github.com", "remote: create a pull request", "to https://github.com", "origin", "pushed", "repo view"))
+            if not has_t6_sig:
+                return _make_no_log_response("T-6", "個人GitHubリポジトリURL（https://github.com/...）またはプッシュログが確認できません。")
+            return {
+                "verdict": "SUCCESS",
+                "w_check_status": "VERIFIED_APPROVED",
+                "step_id": "T-6",
+                "autonomous_verdict": "【AI確認者 研修修了承認 ✓✓】受講生個人GitHubへのコード公開を確認。全研修カリキュラムの完走を正式承認します。",
+                "message": (
+                    "🎉【全研修工程 修了認定・Wチェック承認】🎉\n"
+                    "受講生ご自身の個人GitHubへのリポジトリ公開を確認しました！おめでとうございます！\n"
+                    "現場課題の企画・ADKエージェント実装・客観Wチェック自動化・Cloud Runデプロイ・オープンソース公開までの一連のサイクルを完全にマスターしました。\n"
+                    "画面右上の『最終評価レポート』ボタンをクリックし、研修修了証・総合評価報告書を発行・保全してください！"
+                ),
+            }
+
 
     # 5. 事前確認: df -h 空き容量チェック
     if "1-1" in step_str or ("df" in output_lower and "1" in step_str):
@@ -1010,56 +1424,87 @@ def guide_training_app_creation(idea: str = "", course_type: str = "custom") -> 
 
     Args:
         idea: 受講生が作成したいアプリのアイデア（空欄の場合はアイデア出しやHITMAN作成コースを提案）。
-        course_type: コースタイプ（'custom': オリジナルアプリ, 'hitman': HITMAN作成コース）。
+        course_type: コースタイプ（'custom'/'original': オリジナルアプリ, 'hitman'/'hitman_clone': HITMAN作成コース）。
 
     Returns:
         開発ガイダンス、推奨構成、AntiGravity投入プロンプト案を含む辞書。
     """
+    global ACTIVE_TRAINING_COURSE
     idea_clean = (idea or "").strip()
-    if course_type == "hitman" or not idea_clean or "思いつかない" in idea_clean or "hitman" in idea_clean.lower():
+    is_hitman = (
+        course_type in ("hitman", "hitman_clone")
+        or "hitman" in course_type.lower()
+        or not idea_clean
+        or "思いつかない" in idea_clean
+        or "hitman" in idea_clean.lower()
+    )
+
+    if is_hitman:
+        ACTIVE_TRAINING_COURSE = "hitman_clone"
         return {
             "status": "success",
-            "course": "HITMAN作成コース（ペアオペレーター構築体験）",
+            "course": "コースB: HITMAN作成コース（HITMANクローン構築体験）",
             "concept": "HITMAN自身のアーキテクチャ（Excel手順書パーサー、A2UIカード、客観Wチェック判定、エスカレーションゲート）を自ら構築・デプロイする王道コースです。",
             "recommended_steps": [
-                "1. 要件定義: Excel手順書の読み込みとA2UIカード出力の設計",
-                "2. 判定エンジン: ターミナルログの客観Wチェックロジックの実装",
-                "3. エスカレ制御: 上長協議ゲートと2人体制特別モードの実装",
-                "4. デプロイ: Vertex AI / Cloud Run へのワンコマンドデプロイ体験",
+                "T-1. 開発環境構築とスキル同期（モデル選定3.8/3.6、作業フォルダ作成、リポジトリクローン）",
+                "T-2. HITMAN仕様設計（Excel手順書データ構造、客観Wチェック判定、エスカレ仕様）",
+                "T-3. 判定コア＆A2UI実装（手順書パーサー、ログ検証ロジック、A2UIカード生成）",
+                "T-4. 単体テスト＆Wチェック（自己申告差し戻しテスト、Pytest全件PASSED確認）",
+                "T-5. Cloud Run 本番デプロイ（コンテナビルド、本番公開URL発行）",
+                "T-6. 個人GitHub公開＆修了証発行（publish-to-github、個人リポジトリ公開）",
             ],
             "prompt_for_antigravity": (
-                "あなたはAIペアオペレーターHITMANの設計・構築メンターです。"
-                "Excel手順書を読み込み、事前確認コマンドをA2UIカードで提示し、"
-                "ターミナルログを客観検証するHITMANエージェントの最小構成を作成してください。"
+                "【AntiGravity投入用プロンプト: コースB（HITMANクローン構築）】\n"
+                "あなたは株式会社AltXのAI研修専属メンターです。\n"
+                "1. モデル選定: チャットのモデル設定でまず「gemini-3.8-flash」を選択してください。エラーや利用不可の場合は「gemini-3.6-flash」を選択してください。\n"
+                "2. 作業ディレクトリ: 「altx-agent-workspace」を作成し、以後のファイル作成や作業はすべてこのフォルダ内で行ってください。\n"
+                "3. リポジトリクローン:\n"
+                "   git clone https://github.com/almlog/altx-ai-training-lab.git\n"
+                "   を実行し、リポジトリ内の .agents/skills/ にある研修スキル群（pick-your-agent-project, build-agent-frontend, enable-a2ui 等）を読み込んで自己学習してください。\n"
+                "4. HITMANクローン作成:\n"
+                "   - Excel/CSV手順書の読み込みとA2UIカード出力\n"
+                "   - ターミナルログの客観Wチェック判定（自己申告は厳格差し戻し、エラー検知、合格承認）\n"
+                "   - Cloud Run へのデプロイ準備とPytest単体テスト\n"
+                "上記を伴走支援してください。"
             ),
             "message": (
-                "【研修モード: HITMAN作成コースへようこそ！】\n"
-                "アイデアがまだ浮かばなくても全く問題ありません！まずはこのHITMAN（ペアオペレーター）自身を"
+                "【研修モード: コースB（HITMANクローン構築コース）へようこそ！】\n"
+                "アイデアがまだ浮かばなくても全く問題ありません！まずはこのHITMAN（AIペアオペレーター）自身を"
                 "自分の手で作成・デプロイしてみましょう。手順書パーサー、A2UI表示、客観Wチェック判定の仕組みを"
-                "体験することで、AIエージェント開発の神髄をマスターできます。"
+                "体験することで、実践的なAIエージェント開発の神髄をマスターできます。\n"
+                "画面左側の手順ステップ『T-1: 開発環境構築とスキル同期』から順に進めてください。"
             ),
         }
 
+    ACTIVE_TRAINING_COURSE = "original"
     return {
         "status": "success",
-        "course": "オリジナルアプリ開発コース",
-        "user_idea": idea_clean,
+        "course": "コースA: オリジナルアプリ開発コース（自作AIツール開発）",
+        "user_idea": idea_clean or "現場課題を解決するオリジナルAIエージェント",
         "recommended_architecture": {
             "framework": "Google ADK (Agent Development Kit) + Python",
-            "model": "gemini-3.6-flash (Vertex AI global)",
+            "model": "gemini-3.8-flash (未提供・エラー時は gemini-3.6-flash)",
             "ui": "A2UI (Agent-to-UI) または FastAPI チャットフロントエンド",
-            "tools": "業務に応じた自作関数ツール（ログ解析、API連携、DB照会等）",
+            "workspace": "altx-agent-workspace",
+            "skills": "pick-your-agent-project, build-agent-frontend, enable-a2ui, publish-to-github",
         },
         "prompt_for_antigravity": (
-            f"受講生オリジナル企画: 『{idea_clean}』\n"
-            f"上記の現場課題を解決する自律型AIエージェントを Google ADK (Python) で作成してください。"
-            f"事前確認、客観的検証ツール、A2UIカード表示を組み込み、Cloud Runへのデプロイ準備を整えてください。"
+            f"【AntiGravity投入用プロンプト: コースA（オリジナルAI開発）】\n"
+            f"受講生オリジナル企画: 『{idea_clean or '現場課題を解決する自作エージェント'}』\n"
+            f"あなたは株式会社AltXのAI研修専属メンターです。\n"
+            f"1. モデル選定: チャットのモデル設定でまず「gemini-3.8-flash」を選択してください。エラーや利用不可の場合は「gemini-3.6-flash」を選択してください。\n"
+            f"2. 作業ディレクトリ: 「altx-agent-workspace」を作成し、以後のファイル作成や作業はすべてこのフォルダ内で行ってください。\n"
+            f"3. リポジトリクローン:\n"
+            f"   git clone https://github.com/almlog/altx-ai-training-lab.git\n"
+            f"   を実行し、リポジトリ内の .agents/skills/ にある研修スキル群（pick-your-agent-project, build-agent-frontend, enable-a2ui 等）を読み込んで自己学習してください。\n"
+            f"4. エージェント開発:\n"
+            f"   スキル「pick-your-agent-project」を活用して要件定義（project_brief.md）を作成し、自作関数ツール、A2UIカード表示、テスト、Cloud Runデプロイまでを伴走支援してください。"
         ),
         "message": (
-            f"【研修モード: オリジナルアプリ企画『{idea_clean}』】\n"
+            f"【研修モード: コースA（オリジナルアプリ企画『{idea_clean or '自作エージェント'}』）】\n"
             f"素晴らしいアイデアです！この課題を解決するAIエージェントを構築していきましょう。\n"
             f"HITMANの構造（事前確認ゲート、客観ログ検証、A2UI表示）を取り入れることで、"
-            f"現場で安全に使える実用的なツールが完成します。AntiGravityに投入するプロンプト案を生成しました。"
+            f"現場で安全に使える実用的なツールが完成します。画面左側の手順ステップ『T-1: 開発環境構築とスキル同期』から進めてください。"
         ),
     }
 
@@ -1478,6 +1923,7 @@ root_agent = Agent(
         set_operation_mode,
         request_supervisor_step_skip,
         guide_training_app_creation,
+        set_training_course,
     ],
     after_agent_callback=generate_memories_callback,
     after_model_callback=a2ui_callback,

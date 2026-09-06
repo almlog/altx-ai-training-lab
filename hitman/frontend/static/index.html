@@ -199,6 +199,76 @@
   .btn-escalate-gate:hover {
     background: #b91c1c;
   }
+    /* Training Mode Course Card & AGY Prompt Buttons */
+  .training-course-card {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin: 0.5rem 0.6rem 0.4rem;
+  }
+  .training-course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.45rem;
+  }
+  .training-course-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+  .course-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #374151;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .course-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+  .course-btn.active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  }
+  .btn-copy-agy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 3px 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.3rem;
+    transition: all 0.15s ease;
+  }
+  .btn-copy-agy:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+  }
+  .flow-banner.training {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+
   .two-person-banner {
     background: #faf5ff;
     border: 1px solid #c084fc;
@@ -1508,7 +1578,8 @@ let appState = {
   userId: "operator-01",
   startTime: null,
   endTime: null,
-  mode: "NORMAL", // "NORMAL" or "SPECIAL_PAIR"
+  mode: "NORMAL", // "NORMAL", "TRAINING", "SPECIAL_PAIR"
+  trainingCourse: "original", // "original" or "hitman_clone"
   supervisorName: "",
   escalationActive: false,
   escalationReason: "",
@@ -1585,7 +1656,8 @@ function updateSopItemsFromDb(sopDb, seq) {
           cmd: sub.command || "",
           check: sub.expected_check || "正常終了",
           isSub: true,
-          cautions: sub.cautions || ""
+          cautions: sub.cautions || "",
+          agy_prompt: sub.agy_prompt || ""
         });
       }
     } else {
@@ -1596,53 +1668,55 @@ function updateSopItemsFromDb(sopDb, seq) {
         cmd: parentData.command || "",
         check: parentData.expected_check || "正常終了",
         isSub: false,
-        cautions: parentData.cautions || ""
+        cautions: parentData.cautions || "",
+        agy_prompt: parentData.agy_prompt || ""
       });
     }
   }
 
-  // Escalation Gate
-  if (sopDb["E"]) {
-    const escSub = sopDb["E"].sub_steps || {};
-    for (const escId of Object.keys(escSub)) {
+  // Escalation Gate and Rollback branches (for production operations, omitted in training)
+  if (appState.mode !== "TRAINING") {
+    if (sopDb["E"]) {
+      const escSub = sopDb["E"].sub_steps || {};
+      for (const escId of Object.keys(escSub)) {
+        items.push({
+          id: escId,
+          parent: "E",
+          title: escSub[escId].title || "【エスカレーション】協議・GO/NOGO判断ゲート",
+          cmd: escSub[escId].command || "# [エスカレーション・ゲート]",
+          check: escSub[escId].expected_check || "判断根拠・承認確認",
+          isEscalation: true
+        });
+      }
+    } else {
       items.push({
-        id: escId,
+        id: "E-1",
         parent: "E",
-        title: escSub[escId].title || "【エスカレーション】協議・GO/NOGO判断ゲート",
-        cmd: escSub[escId].command || "# [エスカレーション・ゲート]",
-        check: escSub[escId].expected_check || "判断根拠・承認確認",
+        title: "【エスカレーション】協議・GO/NOGO判断ゲート",
+        cmd: "# [ゲート制御] 対応結果・GO/NOGO・判断根拠を入力",
+        check: "判断根拠・承認確認",
         isEscalation: true
       });
     }
-  } else {
-    items.push({
-      id: "E-1",
-      parent: "E",
-      title: "【エスカレーション】協議・GO/NOGO判断ゲート",
-      cmd: "# [ゲート制御] 対応結果・GO/NOGO・判断根拠を入力",
-      check: "判断根拠・承認確認",
-      isEscalation: true
-    });
-  }
 
-  // Rollback Branch
-  if (sopDb["R"]) {
-    const rbSub = sopDb["R"].sub_steps || {};
-    for (const rbId of Object.keys(rbSub)) {
-      items.push({
-        id: rbId,
-        parent: "R",
-        title: rbSub[rbId].title || "【ロールバック】旧環境復元",
-        cmd: rbSub[rbId].command || "",
-        check: rbSub[rbId].expected_check || "復元完了",
-        isRollback: true
-      });
+    if (sopDb["R"]) {
+      const rbSub = sopDb["R"].sub_steps || {};
+      for (const rbId of Object.keys(rbSub)) {
+        items.push({
+          id: rbId,
+          parent: "R",
+          title: rbSub[rbId].title || "【ロールバック】旧環境復元",
+          cmd: rbSub[rbId].command || "",
+          check: rbSub[rbId].expected_check || "復元完了",
+          isRollback: true
+        });
+      }
+    } else {
+      items.push(
+        { id: "R-1", parent: "R", title: "【ロールバック】旧バージョン復元", cmd: "tar -xzvf /backup/app_*.tar.gz -C / && cp -p /backup/.env.bak /var/www/app/.env", check: "旧ファイル復元完了", isRollback: true },
+        { id: "R-2", parent: "R", title: "【ロールバック】サービス再起動と健全性確認", cmd: "systemctl restart my-app.service && curl -I http://localhost:8080/health", check: "HTTP 200 OK 復帰", isRollback: true }
+      );
     }
-  } else {
-    items.push(
-      { id: "R-1", parent: "R", title: "【ロールバック】旧バージョン復元", cmd: "tar -xzvf /backup/app_*.tar.gz -C / && cp -p /backup/.env.bak /var/www/app/.env", check: "旧ファイル復元完了", isRollback: true },
-      { id: "R-2", parent: "R", title: "【ロールバック】サービス再起動と健全性確認", cmd: "systemctl restart my-app.service && curl -I http://localhost:8080/health", check: "HTTP 200 OK 復帰", isRollback: true }
-    );
   }
 
   SOP_ITEMS = items;
@@ -2034,7 +2108,8 @@ function updateModeUI() {
   } else if (appState.mode === "TRAINING") {
     badge.className = "mode-badge mode-training";
     badgeIcon.textContent = "school";
-    badgeText.textContent = "研修モード（自作体験/HITMAN作成）";
+    const cLabel = appState.trainingCourse === "hitman_clone" ? "コースB: HITMANクローン" : "コースA: 自作AI開発";
+    badgeText.textContent = `研修モード（${cLabel}）`;
     twoPersonBanner.style.display = "none";
     if (chipTrainingIdea) chipTrainingIdea.style.display = "inline-flex";
     if (chipTrainingHitman) chipTrainingHitman.style.display = "inline-flex";
@@ -2047,6 +2122,26 @@ function updateModeUI() {
     if (chipTrainingIdea) chipTrainingIdea.style.display = "none";
     if (chipTrainingHitman) chipTrainingHitman.style.display = "none";
     if (chipSupervisorSkip) chipSupervisorSkip.style.display = "none";
+  }
+
+  const trainingCard = document.getElementById("training-course-card");
+  if (trainingCard) {
+    if (appState.mode === "TRAINING") {
+      trainingCard.style.display = "block";
+      const btnOrig = document.getElementById("btn-course-original");
+      const btnHitman = document.getElementById("btn-course-hitman");
+      if (btnOrig && btnHitman) {
+        if (appState.trainingCourse === "hitman_clone") {
+          btnOrig.classList.remove("active");
+          btnHitman.classList.add("active");
+        } else {
+          btnOrig.classList.add("active");
+          btnHitman.classList.remove("active");
+        }
+      }
+    } else {
+      trainingCard.style.display = "none";
+    }
   }
 
   const escBanner = document.getElementById("escalation-alert-banner");
@@ -2066,19 +2161,34 @@ function updateModeUI() {
 
 async function changeOperationModeFromHdr(newMode) {
   try {
+    const courseParam = appState.trainingCourse || "original";
     const res = await fetch("/api/mode", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: newMode })
+      body: JSON.stringify({ mode: newMode, course: courseParam })
     });
     const data = await res.json();
     if (data.status === "success") {
       appState.mode = data.mode;
+      if (data.sop) {
+        if (data.parameters) appState.parameters = data.parameters;
+        if (data.approval) appState.approval = data.approval;
+        if (data.branch_rules) appState.branchRules = data.branch_rules;
+        updateSopItemsFromDb(data.sop, data.sequence);
+        appState.sopResults = {};
+        appState.currentStep = (data.sequence && data.sequence.length > 0) ? data.sequence[0] : "1-1";
+        appState.errorStep = null;
+        appState.escalationActive = false;
+        renderFlowChart();
+        renderSopTable();
+        renderApprovalAndParameters();
+      }
       updateModeUI();
       saveState();
       showToast(`✓ 運用モードを【${data.mode}】に変更しました`);
       if (newMode === "TRAINING") {
-        sendMessage("【運用モード切替: 研修モード】\n受講生の実践研修モードに切り替えました。オリジナルAIアプリの企画・開発体験、またはHITMAN作成コースについてご案内できます。");
+        const cName = appState.trainingCourse === "hitman_clone" ? "コースB: HITMANクローン構築" : "コースA: オリジナルAIツール開発";
+        sendMessage(`【運用モード切替: 研修モード（${cName}）】\n受講生の実践研修モードに切り替えました。手順フローを「T-1: 開発環境構築とスキル同期」へ更新しました。最初のステップ（${appState.currentStep}）のガイダンスとAntiGravity投入用プロンプトを提示してください。`);
       } else if (newMode === "SPECIAL_PAIR") {
         sendMessage("【運用モード切替: エスカレ特別モード（2人体制）】\n上長同席の特別モードに切り替えました。全コマンド投入において相互ダブルチェックを実施してください。");
       } else {
@@ -2090,6 +2200,63 @@ async function changeOperationModeFromHdr(newMode) {
   } catch(e) {
     alert("モード切替APIエラー: " + e.message);
   }
+}
+
+async function switchTrainingCourse(course) {
+  try {
+    showToast("🎓 研修コースを切り替え中…");
+    const res = await fetch("/api/training/course", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ course: course })
+    });
+    const data = await res.json();
+    appState.trainingCourse = data.course || course;
+    if (data.sop) {
+      if (data.parameters) appState.parameters = data.parameters;
+      if (data.approval) appState.approval = data.approval;
+      if (data.branch_rules) appState.branchRules = data.branch_rules;
+      updateSopItemsFromDb(data.sop, data.sequence);
+      appState.sopResults = {};
+      appState.currentStep = (data.sequence && data.sequence.length > 0) ? data.sequence[0] : "T-1";
+      appState.errorStep = null;
+      appState.escalationActive = false;
+      renderFlowChart();
+      renderSopTable();
+      renderApprovalAndParameters();
+    }
+    updateModeUI();
+    saveState();
+    showToast(`✓ 【${data.course_name || course}】に切り替えました`);
+    sendMessage(`【受講コース選択: ${data.course_name || course}】\n研修モードの手順フローを更新しました。最初のステップ『${appState.currentStep}』の作業手順とAntiGravity投入用プロンプトを提示してください。`);
+  } catch(e) {
+    alert("コース切替エラー: " + e.message);
+  }
+}
+
+function copyAgyPrompt(stepId) {
+  const step = SOP_ITEMS.find(s => s.id === stepId);
+  const promptText = (step && step.agy_prompt) ? step.agy_prompt : `ステップ ${stepId} を AntiGravity で実行してください。`;
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(promptText).then(() => {
+      showToast(`📋 ステップ ${stepId} のAntiGravityプロンプトをコピーしました！`);
+    }).catch(() => {
+      _fallbackCopy(promptText, stepId);
+    });
+  } else {
+    _fallbackCopy(promptText, stepId);
+  }
+}
+
+function _fallbackCopy(text, stepId) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+  showToast(`📋 ステップ ${stepId} のAntiGravityプロンプトをコピーしました！`);
 }
 
 function openSupervisorSkipModal() {
@@ -2528,6 +2695,7 @@ function renderFlowChart() {
           <span class="step-title-text">${step.title}</span>
         </div>
         <div class="step-cmd-preview">${step.cmd.substring(0, 45)}...</div>
+        ${step.agy_prompt ? `<div style="margin-top:0.35rem;"><button type="button" class="btn-copy-agy" onclick="event.stopPropagation(); copyAgyPrompt('${step.id}')" title="AntiGravity投入用プロンプトをクリップボードにコピー"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span><span>AGYプロンプトをコピー</span></button></div>` : ""}
       </div>
       <div class="step-status-icon">${icon}</div>
     `;
@@ -2541,6 +2709,7 @@ function renderFlowChart() {
     }
   });
 
+  if (appState.mode !== "TRAINING") {
   // Escalation branch section
   const escBranchDiv = document.createElement("div");
   escBranchDiv.className = "flow-divider-branch";
@@ -2608,11 +2777,13 @@ function renderFlowChart() {
           <span class="step-title-text">${step.title}</span>
         </div>
         <div class="step-cmd-preview">${step.cmd.substring(0, 45)}...</div>
+        ${step.agy_prompt ? `<div style="margin-top:0.35rem;"><button type="button" class="btn-copy-agy" onclick="event.stopPropagation(); copyAgyPrompt('${step.id}')" title="AntiGravity投入用プロンプトをクリップボードにコピー"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span><span>AGYプロンプトをコピー</span></button></div>` : ""}
       </div>
       <div class="step-status-icon">${icon}</div>
     `;
     flowList.appendChild(node);
   });
+  }
 
   // Update banner
   const banner = document.getElementById("flow-banner");
@@ -2623,6 +2794,10 @@ function renderFlowChart() {
   } else if (appState.errorStep) {
     banner.className = "flow-banner error";
     bannerText.textContent = `【想定外事象】ステップ ${appState.errorStep} で停止中。原因調査またはロールバック(R-1)を検討してください。`;
+  } else if (appState.mode === "TRAINING") {
+    const courseLabel = appState.trainingCourse === "hitman_clone" ? "コースB (HITMANクローン構築)" : "コースA (オリジナルAIツール開発)";
+    banner.className = "flow-banner training";
+    bannerText.innerHTML = `🎓 <strong>研修実践中: ${courseLabel}</strong> ｜ 現在ステップ: <strong>${appState.currentStep}</strong>`;
   } else {
     banner.className = "flow-banner";
     bannerText.textContent = `現在の作業位置: ステップ ${appState.currentStep}`;
@@ -2953,6 +3128,11 @@ function detectStepTransitions(text, parts) {
     };
     appState.errorStep = null;
     appState.escalationActive = false;
+    // Auto advance to next step in sequence
+    const curIdx = STEP_SEQUENCE.indexOf(appState.currentStep);
+    if (curIdx >= 0 && curIdx + 1 < STEP_SEQUENCE.length) {
+      appState.currentStep = STEP_SEQUENCE[curIdx + 1];
+    }
   } else if (text.includes("BLOCKED_RETRY") || text.includes("進行ブロック") || text.includes("【判定: 不合格】") || text.includes("エラー")) {
     appState.sopResults[appState.currentStep] = {
       verdict: "FAILED",
@@ -2963,7 +3143,7 @@ function detectStepTransitions(text, parts) {
   }
 
   // Detect which step was presented next
-  const stepMatch = text.match(/ステップ\s*([0-9]-[0-9]|R-[0-9]|E-[0-9]|[0-9])/i);
+  const stepMatch = text.match(/ステップ\s*(T-[0-9]+|[0-9]-[0-9]+|R-[0-9]+|E-[0-9]+|[0-9]+)/i);
   if (stepMatch) {
     let nextStep = stepMatch[1];
     if (nextStep.length === 1 && !nextStep.includes("-")) nextStep += "-1";
@@ -3075,7 +3255,7 @@ function quickSend(txt) {
   }
 
   // Strict step sequence enforcement (skip prohibition)
-  const stepMatch = txt.match(/ステップ\s*([0-9]-[0-9]|R-[0-9]|E-[0-9]|[0-9])/i);
+  const stepMatch = txt.match(/ステップ\s*(T-[0-9]+|[0-9]-[0-9]+|R-[0-9]+|E-[0-9]+|[0-9]+)/i);
   if (stepMatch) {
     let target = stepMatch[1];
     if (target.length === 1 && !target.includes("-")) target += "-1";
@@ -3208,7 +3388,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const hasSaved = loadState();
 
   // Sync SOP from backend
-  fetch("/api/sop")
+  const curMode = appState.mode || "NORMAL";
+  const curCourse = appState.trainingCourse || "original";
+  fetch(`/api/sop?mode=${encodeURIComponent(curMode)}&course=${encodeURIComponent(curCourse)}`)
     .then(res => res.json())
     .then(data => {
       if (data && data.sop) {
