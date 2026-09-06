@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="author" content="Shunpei Suzuki <suzuki.shunpei@altx.co.jp>">
 <meta name="copyright" content="Copyright 2026 Shunpei Suzuki, AltX Inc.">
 <title>HITMAN - 運用コンソール (SOP Pair Operator)</title>
@@ -1093,6 +1093,438 @@
     color: #0f172a;
     word-break: break-all;
   }
+
+/* ==========================================================================
+   Mobile & Responsive Optimization (Smartphones & Tablets <= 850px)
+   ========================================================================== */
+
+/* Touch Action & Base Safe-Area Sizing */
+html, body {
+  height: 100vh;
+  height: 100dvh;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+.mobile-view-tabs {
+  display: none; /* hidden on desktop */
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  padding: 0.35rem 0.6rem;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.mobile-tab-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.mobile-tab-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.mobile-unread-badge {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.38rem;
+  border-radius: 9999px;
+  animation: pulse-badge 1.5s infinite;
+}
+
+@keyframes pulse-badge {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.mobile-step-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+@media (max-width: 850px) {
+  /* Header adjustments */
+  header {
+    height: auto !important;
+    min-height: 48px;
+    padding: 0.4rem 0.65rem;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  
+  .header-brand {
+    font-size: 0.95rem;
+    gap: 0.35rem;
+  }
+  
+  .header-brand span:last-child {
+    display: none !important; /* Hide copyright notice in top header on mobile */
+  }
+
+  .header-badge {
+    font-size: 0.65rem;
+    padding: 0.12rem 0.4rem;
+  }
+
+  .header-actions {
+    gap: 0.3rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mode-select-hdr {
+    font-size: 0.74rem;
+    padding: 0.25rem 0.4rem;
+    max-width: 155px;
+    height: 32px;
+  }
+
+  #mode-badge {
+    display: none !important;
+  }
+
+  .header-status {
+    display: none !important;
+  }
+
+  .btn-report-hdr span:last-child,
+  .btn-reset span:last-child {
+    display: none !important; /* Icon-only buttons for compact mobile header */
+  }
+
+  .btn-report-hdr,
+  .btn-reset {
+    padding: 0 0.5rem;
+    height: 32px;
+    min-width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Show Mobile View Tab Switcher */
+  .mobile-view-tabs {
+    display: flex !important;
+  }
+
+  /* Workspace Layout on Mobile */
+  #workspace {
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  #workspace.mobile-show-chat #left-panel {
+    display: none !important;
+  }
+
+  #workspace.mobile-show-chat #right-panel {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100% !important;
+  }
+
+  #workspace.mobile-show-sop #left-panel {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    border-right: none !important;
+  }
+
+  #workspace.mobile-show-sop #right-panel {
+    display: none !important;
+  }
+
+  /* Left Panel adjustments */
+  .sop-meta-card {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  .approval-card-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .approval-stamp-group {
+    width: 100%;
+  }
+
+  #meta-param-badge {
+    align-self: flex-start;
+  }
+
+  .panel-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .panel-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 0.55rem 0.75rem;
+    min-height: 40px;
+  }
+
+  .flow-container {
+    padding: 0.6rem 0.5rem;
+  }
+
+  .step-node {
+    padding: 0.6rem 0.65rem;
+  }
+
+  .step-title-text {
+    font-size: 0.82rem;
+  }
+
+  .step-cmd-preview {
+    font-size: 0.7rem;
+    max-width: 100%;
+    word-break: break-all;
+  }
+
+  .sop-toolbar {
+    padding: 0.4rem 0.6rem;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .sop-table th, .sop-table td {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.74rem;
+  }
+
+  .log-viewer-area {
+    font-size: 0.72rem;
+    padding: 0.65rem;
+    line-height: 1.35;
+  }
+
+  /* Right Panel / Chat adjustments */
+  #log {
+    padding: 0.6rem 0.5rem;
+    gap: 0.65rem;
+  }
+
+  .msg.user {
+    max-width: 90%;
+  }
+
+  .msg.agent {
+    max-width: 98%;
+  }
+
+  .bubble {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.86rem;
+  }
+
+  /* Quick Bar */
+  .quick-bar {
+    padding: 0.3rem 0.5rem;
+    gap: 0.35rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .quick-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  /* Form & Input */
+  form {
+    padding: 0.4rem 0.5rem;
+    gap: 0.4rem;
+    padding-bottom: max(0.4rem, env(safe-area-inset-bottom, 0.4rem));
+    background: #ffffff;
+  }
+
+  textarea#input {
+    font-size: 16px !important; /* Prevents iOS Safari zoom */
+    height: 42px;
+    min-height: 42px;
+    max-height: 110px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    line-height: 1.35;
+  }
+
+  button.attach-btn {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    padding: 0;
+    border-radius: 8px;
+  }
+
+  button.send-btn {
+    height: 42px;
+    padding: 0 0.85rem;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+
+  /* A2UI Cards */
+  .a2card {
+    border-radius: 8px;
+    margin-top: 0.45rem;
+    width: 100%;
+  }
+
+  .a2card-header {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .a2card-body {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .cmd-block {
+    border-radius: 6px;
+  }
+
+  .cmd-header {
+    padding: 0.3rem 0.55rem;
+  }
+
+  .cmd-code {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.74rem;
+    line-height: 1.35;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .copy-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.72rem;
+    min-height: 30px;
+  }
+
+  /* Modals on Mobile */
+  .modal-backdrop {
+    padding: 0.4rem;
+  }
+
+  .modal-dialog {
+    width: 96% !important;
+    max-width: 96% !important;
+    max-height: 94vh !important;
+    max-height: 94dvh !important;
+    border-radius: 10px;
+    margin: auto;
+  }
+
+  .modal-header {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .modal-body {
+    padding: 0.8rem 0.85rem;
+    gap: 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .modal-footer {
+    padding: 0.6rem 0.85rem;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .decision-options {
+    flex-direction: column !important;
+  }
+
+  .decision-label-card {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .training-course-buttons {
+    flex-direction: column;
+  }
+
+  .course-btn {
+    width: 100%;
+  }
+
+  .report-score-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Extra small screens (iPhone SE, Galaxy Fold <= 380px) */
+@media (max-width: 380px) {
+  .header-brand .header-badge {
+    display: none !important;
+  }
+  .mobile-tab-btn {
+    font-size: 0.76rem;
+    padding: 0.45rem 0.3rem;
+  }
+  .mobile-tab-btn .material-symbols-outlined {
+    font-size: 16px;
+  }
+  .mode-select-hdr {
+    max-width: 125px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1133,7 +1565,21 @@
   </div>
 </header>
 
-<div id="workspace">
+<!-- Mobile View Segmented Switcher (Visible on <= 850px) -->
+<div id="mobile-view-tabs" class="mobile-view-tabs">
+  <button id="tab-btn-chat" class="mobile-tab-btn active" onclick="switchMobileView('chat')" type="button">
+    <span class="material-symbols-outlined">forum</span>
+    <span>AI対話・Wチェック</span>
+    <span id="mobile-chat-badge" class="mobile-unread-badge" style="display:none;">新着</span>
+  </button>
+  <button id="tab-btn-sop" class="mobile-tab-btn" onclick="switchMobileView('sop')" type="button">
+    <span class="material-symbols-outlined">assignment</span>
+    <span>手順書・ログ・進捗</span>
+    <span id="mobile-step-badge" class="mobile-step-badge">1-1</span>
+  </button>
+</div>
+
+<div id="workspace" class="mobile-show-chat">
   <!-- Left Panel: SOP / Flow / Logs / Report -->
   <div id="left-panel">
     <!-- Human Approval Record & Resolved Parameters Header -->
@@ -1564,6 +2010,30 @@
 </div>
 
 <script>
+
+// --- Mobile View Switcher Logic ---
+function switchMobileView(view) {
+  const ws = document.getElementById("workspace");
+  const chatBtn = document.getElementById("tab-btn-chat");
+  const sopBtn = document.getElementById("tab-btn-sop");
+  const chatBadge = document.getElementById("mobile-chat-badge");
+
+  if (!ws || !chatBtn || !sopBtn) return;
+
+  if (view === "chat") {
+    ws.classList.remove("mobile-show-sop");
+    ws.classList.add("mobile-show-chat");
+    chatBtn.classList.add("active");
+    sopBtn.classList.remove("active");
+    if (chatBadge) chatBadge.style.display = "none";
+  } else {
+    ws.classList.remove("mobile-show-chat");
+    ws.classList.add("mobile-show-sop");
+    sopBtn.classList.add("active");
+    chatBtn.classList.remove("active");
+  }
+}
+
 // --- Core State & Persistence ---
 const STORAGE_KEY = "hitman_console_state_v2";
 
@@ -2642,6 +3112,10 @@ function exportReportMarkdown() {
 
 // --- Render Flow & SOP Sheet ---
 function renderFlowChart() {
+  const mobileStepBadge = document.getElementById("mobile-step-badge");
+  if (mobileStepBadge) {
+    mobileStepBadge.textContent = appState.currentStep || "進行中";
+  }
   const flowList = document.getElementById("flow-list");
   flowList.innerHTML = "";
 
@@ -3160,6 +3634,11 @@ function detectStepTransitions(text, parts) {
 }
 
 function renderReply(b, parts, saveHistory = true) {
+  const ws = document.getElementById("workspace");
+  if (ws && ws.classList.contains("mobile-show-sop")) {
+    const chatBadge = document.getElementById("mobile-chat-badge");
+    if (chatBadge) chatBadge.style.display = "inline-block";
+  }
   b.textContent = "";
   const texts = parts.filter(p => p && (p.kind === "text" || (!p.kind && p.text))).map(p => p.text || "");
   const a2ui = parts.filter(p => p && p.kind === "a2ui" && p.data).map(p => p.data);
